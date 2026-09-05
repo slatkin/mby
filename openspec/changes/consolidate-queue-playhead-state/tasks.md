@@ -21,6 +21,6 @@
 
 ## 5. Docs and gates
 
-- [ ] 5.1 Add a "Playhead" entry under `## Queue` in `CONTEXT.md`. Verify it names the projection concept (active scope + slot + confidence) and lists an *Avoid* line.
-- [ ] 5.2 Sync the `queue-canonical-list` delta into `openspec/specs/queue-canonical-list/spec.md` and run `openspec validate --changes consolidate-queue-playhead-state`. Verify it passes.
-- [ ] 5.3 Full gate: `cargo nextest run -p mbv`, `cargo clippy --workspace --all-targets`, `cargo fmt --all -- --check`, `make check-code-file-lines`. Verify all pass (the pre-existing unrelated `shell_tv_workspace::tests::tv_breakpoint_resize_round_trip_keeps_selected_series` flake excepted).
+- [x] 5.1 Add a "Playhead" entry under `## Queue` in `CONTEXT.md`. Verify it names the projection concept (active scope + slot + confidence) and lists an *Avoid* line.
+- [x] 5.2 Sync the `queue-canonical-list` delta into `openspec/specs/queue-canonical-list/spec.md` and run `openspec validate --changes consolidate-queue-playhead-state`. Verify it passes.
+- [x] 5.3 Full gate: `cargo nextest run -p mbv`, `cargo clippy --workspace --all-targets`, `cargo fmt --all -- --check`, `make check-code-file-lines`. Verify all pass (the pre-existing unrelated `shell_tv_workspace::tests::tv_breakpoint_resize_round_trip_keeps_selected_series` flake excepted).
