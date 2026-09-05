@@ -55,8 +55,6 @@ next to the other shell-runtime state on `App`, not inside a per-scope
 struct PlayheadProjection {
     scope: QueueScope,
     slot: usize,
-    position_ticks: i64,
-    runtime_ticks: i64,
     confidence: PlayheadConfidence, // Confirmed | Predicted(PredictionReason)
 }
 enum PredictionReason { Relocated, ItemSelected } // = today's Shift / Jump
@@ -75,8 +73,13 @@ Add `App::reconcile_playhead()` called from the run loop immediately after
 `handle_player_event` drains the player channel (`shell_run.rs` ~L263), in the
 same spot the other post-event re-projections already run. It compares the
 projection's predicted slot against `status.current_idx` + `status.queue_len`
-and drops the prediction on a match. `effective_playback_state` then just
-reads the projection; it loses its `&mut self`.
+and drops the prediction on a match. It resolves only the *prediction* — which
+slot is active and whether stale progress is suppressed. It does NOT snapshot
+position/runtime: those stay a live per-frame read from `player.status` (the
+single source of truth — the mpv thread advances them without emitting a
+`PlayerEvent`, so a pinned copy would freeze between discrete transitions).
+`effective_playback_state` then just reads the projection plus live status; it
+loses its `&mut self`.
 
 Alternative considered: reconcile inside `sync_queue`. Rejected — `sync_queue`
 also runs on pure layout ticks with no new player event, and the reconcile

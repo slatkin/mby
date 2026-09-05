@@ -32,9 +32,9 @@ pub(super) enum PlaybackTarget {
 /// `PendingActiveIdx::Jump` respectively.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum PredictionReason {
-    /// A queue edit relocated the still-playing item to a new slot; its
+    /// A queue edit relocated the still-playing item to a new slot; the live
     /// `position_ticks`/`runtime_ticks` in the player status lock stay valid
-    /// and pass through untouched.
+    /// and are read through untouched.
     Relocated,
     /// A different queue item was selected to play; the status lock still holds
     /// the previous item's position/runtime, so progress reports as 0/0 until
@@ -55,19 +55,17 @@ pub(super) enum PlayheadConfidence {
 ///
 /// Folds in the former `App::pending_active_idx` (the optimistic active index
 /// awaiting player-thread acknowledgement — now `confidence` plus
-/// `scope`/`slot`/`position_ticks`/`runtime_ticks`) and the former
-/// `App::queue_cursor_pushed` (the scoped one-shot cursor push — now
-/// `pending_push`).
+/// `scope`/`slot`) and the former `App::queue_cursor_pushed` (the scoped
+/// one-shot cursor push — now `pending_push`).
 ///
 /// The resting "no prediction, no armed push" state is `confidence: Confirmed`
-/// with `pending_push: None`; `slot`/`position_ticks`/`runtime_ticks` are only
-/// meaningful while `confidence` is `Predicted`.
+/// with `pending_push: None`; `slot` is only meaningful while `confidence` is
+/// `Predicted`. Position/runtime are never projected here — they are a live
+/// per-frame read from `player.status`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct PlayheadProjection {
     pub(super) scope: QueueScope,
     pub(super) slot: usize,
-    pub(super) position_ticks: i64,
-    pub(super) runtime_ticks: i64,
     pub(super) confidence: PlayheadConfidence,
     /// One-shot cursor push for the next `sync_queue`, scoped to one queue
     /// scope and consumed only while that scope is visible. `Follow` yields to
@@ -83,8 +81,6 @@ impl PlayheadProjection {
         Self {
             scope: QueueScope::Local,
             slot: 0,
-            position_ticks: 0,
-            runtime_ticks: 0,
             confidence: PlayheadConfidence::Confirmed,
             pending_push: None,
         }
@@ -96,22 +92,13 @@ impl PlayheadProjection {
     }
 
     /// Whether an in-flight prediction forces progress to 0/0: true only for
-    /// `Predicted(ItemSelected)` (former `PendingActiveIdx::Jump`).
+    /// `Predicted(ItemSelected)` (former `PendingActiveIdx::Jump`). Every other
+    /// state reads live position/runtime straight off `player.status`.
     pub(super) fn suppresses_progress(&self) -> bool {
         matches!(
             self.confidence,
             PlayheadConfidence::Predicted(PredictionReason::ItemSelected)
         )
-    }
-
-    /// `(position_ticks, runtime_ticks)` as the projection should report them:
-    /// zeroed while `suppresses_progress()`, passed through otherwise.
-    pub(super) fn progress(&self) -> (i64, i64) {
-        if self.suppresses_progress() {
-            (0, 0)
-        } else {
-            (self.position_ticks, self.runtime_ticks)
-        }
     }
 }
 
@@ -379,20 +366,22 @@ mod tests {
         let relocated = PlayheadProjection {
             scope: QueueScope::Local,
             slot: 3,
-            position_ticks: 500,
-            runtime_ticks: 1000,
             confidence: PlayheadConfidence::Predicted(PredictionReason::Relocated),
             pending_push: None,
         };
         assert!(!relocated.suppresses_progress());
-        assert_eq!(relocated.progress(), (500, 1000));
 
         let selected = PlayheadProjection {
             confidence: PlayheadConfidence::Predicted(PredictionReason::ItemSelected),
             ..relocated
         };
         assert!(selected.suppresses_progress());
-        assert_eq!(selected.progress(), (0, 0));
         assert_eq!(selected.idx(), 3);
+
+        let confirmed = PlayheadProjection {
+            confidence: PlayheadConfidence::Confirmed,
+            ..relocated
+        };
+        assert!(!confirmed.suppresses_progress());
     }
 }

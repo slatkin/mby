@@ -131,24 +131,21 @@ impl App {
     }
 
     /// Reconciles the playhead projection against fresh player status: the one
-    /// place that reads `player.status` for playhead purposes and mutates
-    /// `self.playhead`. Runs once per tick after player events drain, never
-    /// during paint (`queue-canonical-list`: reconciliation does not run during
-    /// paint). Local playback only -- when a remote session or cast owns
+    /// place that mutates `self.playhead` from `player.status`, resolving the
+    /// prediction (active slot, progress-suppression) only. Position/runtime are
+    /// never snapshotted here -- they are read live per frame in
+    /// `effective_playback_state`. Runs once per tick after player events drain,
+    /// never during paint (`queue-canonical-list`: reconciliation does not run
+    /// during paint). Local playback only -- when a remote session or cast owns
     /// playback the local status snapshot is irrelevant.
     pub(super) fn reconcile_playhead(&mut self) {
         if self.connected_session_state.is_some() || self.cast_effective_playback_state().is_some()
         {
             return;
         }
-        let (current_idx, queue_len, position_ticks, runtime_ticks) = {
+        let (current_idx, queue_len) = {
             let s = self.player.status.lock().unwrap();
-            (
-                s.current_idx,
-                s.queue_len,
-                s.position_ticks,
-                s.runtime_ticks,
-            )
+            (s.current_idx, s.queue_len)
         };
         if matches!(self.playhead.confidence, PlayheadConfidence::Predicted(_))
             && current_idx == self.playhead.slot
@@ -156,10 +153,6 @@ impl App {
         {
             self.playhead.confidence = PlayheadConfidence::Confirmed;
         }
-        // The projection's tick fields ARE this reconciled snapshot (not a
-        // mirror) so branch-3 readers of `effective_playback_state` stay pure.
-        self.playhead.position_ticks = position_ticks;
-        self.playhead.runtime_ticks = runtime_ticks;
         if matches!(self.playhead.confidence, PlayheadConfidence::Confirmed) {
             self.playhead.slot = current_idx;
         }
@@ -197,13 +190,20 @@ impl App {
             }
         } else {
             let s = self.player.status.lock().unwrap();
-            // Prediction override + progress come from the reconciled
-            // projection; `active`/`paused` are read live off status.
+            // Only the active slot is a reconciled prediction; `active`/`paused`
+            // and position/runtime are read live off status. The sole exception
+            // is `Predicted(ItemSelected)`, where the lock still holds the
+            // previous item's position, so progress is forced to 0/0 until the
+            // player thread reconciles.
             let active_idx = match self.playhead.confidence {
                 PlayheadConfidence::Predicted(_) => self.playhead.idx(),
                 PlayheadConfidence::Confirmed => s.current_idx,
             };
-            let (position_ticks, runtime_ticks) = self.playhead.progress();
+            let (position_ticks, runtime_ticks) = if self.playhead.suppresses_progress() {
+                (0, 0)
+            } else {
+                (s.position_ticks, s.runtime_ticks)
+            };
             super::PlaybackState {
                 active: s.active,
                 active_idx,

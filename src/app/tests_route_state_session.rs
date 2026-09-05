@@ -211,7 +211,7 @@ fn disconnecting_attached_session_preserves_sessions_panel_direct_remote() {
 
 #[test]
 fn displayed_queue_playback_state_stays_active_for_local_daemon_queue() {
-    let mut app = make_local_daemon_app_stub(make_items(3));
+    let app = make_local_daemon_app_stub(make_items(3));
     {
         let mut status = app.player.status.lock().unwrap();
         status.active = true;
@@ -220,7 +220,6 @@ fn displayed_queue_playback_state_stays_active_for_local_daemon_queue() {
         status.runtime_ticks = 84;
         status.paused = true;
     }
-    app.reconcile_playhead();
 
     assert_eq!(
         app.displayed_queue_playback_state(),
