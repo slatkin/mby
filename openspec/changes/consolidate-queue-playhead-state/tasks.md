@@ -17,7 +17,7 @@
 
 ## 4. Scope accessor pass (separate commit, droppable)
 
-- [ ] 4.1 Rename `visible_queue_scope` → `viewed_queue_scope`, `playback_target_queue_scope` → `playing_queue_scope`; derive `queue_scope_is_playback` from the latter; document `displayed_queue*` / `playback_queue*` as viewed vs playing. Verify `cargo check -p mbv` and `cargo clippy --workspace --all-targets` are clean.
+- [x] 4.1 Rename `visible_queue_scope` → `viewed_queue_scope`, `playback_target_queue_scope` → `playing_queue_scope`; derive `queue_scope_is_playback` from the latter; document `displayed_queue*` / `playback_queue*` as viewed vs playing. Verify `cargo check -p mbv` and `cargo clippy --workspace --all-targets` are clean.
 
 ## 5. Docs and gates
 
