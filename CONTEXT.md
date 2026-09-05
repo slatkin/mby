@@ -277,6 +277,15 @@ to Emby items, Feed entries, and Audiobookshelf episodes using the same
 threshold.
 _Avoid_: continue threshold, resume percent, watched threshold
 
+**Playhead**:
+The shell's single reconciled answer to where playback is: the queue scope that
+is playing, the active slot within it, and whether that slot is confirmed by the
+Player owner or an optimistic prediction not yet acknowledged. A prediction
+records its reason — a queue edit relocated the still-playing item, or a
+different item was selected to play. Reconciled in one tick-phase step against
+owner status, never during paint; playback position itself stays a live read.
+_Avoid_: pending active index, cursor push, now-playing index, active_idx
+
 ## Browsing and tabs
 
 **WideMediaList**:
