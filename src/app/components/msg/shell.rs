@@ -271,6 +271,13 @@ pub enum ShellRequest {
         slot_id: Option<mbv_core::playback_queue::QueueSlotId>,
         anchor: (u16, u16),
     },
+    /// Keyboard `.` in the Queue panel: open the queue context menu for the
+    /// component's currently selected row (`None` when the queue is empty).
+    /// `.` is selection-dependent, so the focused `QueueComponent` owns it
+    /// rather than the central router.
+    QueueContextMenu {
+        slot_id: Option<mbv_core::playback_queue::QueueSlotId>,
+    },
     /// A Queue scope pill the user clicked; the component has already switched
     /// its own scope and reset its scroll (design.md D3).
     QueueScopeClick {

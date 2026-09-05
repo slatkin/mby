@@ -1,3 +1,4 @@
+use super::types_playback::PendingActiveIdx;
 use super::{App, PlaybackTarget};
 use crate::app::render::indicators::IndicatorData;
 
@@ -163,22 +164,31 @@ impl App {
             }
         } else {
             let s = self.player.status.lock().unwrap();
-            let active_idx = match self.pending_active_idx {
-                Some(predicted_idx)
-                    if s.current_idx == predicted_idx
+            // `suppress_progress` is set only while an unreconciled `Jump`
+            // prediction is showing a different item than the one the player
+            // status still describes — its position/runtime are the previous
+            // item's and would render as stale progress on the new row.
+            let (active_idx, suppress_progress) = match self.pending_active_idx {
+                Some(pending)
+                    if s.current_idx == pending.idx()
                         && s.queue_len == self.player_tab.total_queue_len() =>
                 {
                     self.pending_active_idx = None;
-                    s.current_idx
+                    (s.current_idx, false)
                 }
-                Some(predicted_idx) => predicted_idx,
-                None => s.current_idx,
+                Some(pending) => (pending.idx(), matches!(pending, PendingActiveIdx::Jump(_))),
+                None => (s.current_idx, false),
+            };
+            let (position_ticks, runtime_ticks) = if suppress_progress {
+                (0, 0)
+            } else {
+                (s.position_ticks, s.runtime_ticks)
             };
             super::PlaybackState {
                 active: s.active,
                 active_idx,
-                position_ticks: s.position_ticks,
-                runtime_ticks: s.runtime_ticks,
+                position_ticks,
+                runtime_ticks,
                 paused: s.paused,
             }
         }

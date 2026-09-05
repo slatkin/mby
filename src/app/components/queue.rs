@@ -259,6 +259,14 @@ impl QueueComponent {
             {
                 return Some(Msg::Queue(QueueRequest::Undo { scope: self.scope }));
             }
+            Key::Char('.') if key.modifiers.is_empty() => {
+                // `.` is a selection-dependent chord the focused component
+                // owns (CONTEXT.md "Global chord"): emit the queue context-menu
+                // request for the currently selected row.
+                return Some(Msg::Shell(ShellRequest::QueueContextMenu {
+                    slot_id: self.list.selected_target().copied(),
+                }));
+            }
             Key::Char('i') => {
                 return selected().map(|(scope, slot_id)| {
                     Msg::Shell(ShellRequest::QueueIntent(QueueIntent::Navigate {
@@ -333,9 +341,12 @@ impl QueueComponent {
                 if !self.area.contains(at) {
                     return None;
                 }
-                let slot_id = self.claim_slot(at);
+                // Legacy parity: a right-click on blank queue space opens no
+                // menu. Only resolve a menu when the click lands on a row —
+                // never fall back to the prior selection (design.md D4).
+                let slot_id = self.claim_slot(at)?;
                 Some(Msg::Shell(ShellRequest::QueueRowContextMenu {
-                    slot_id: slot_id.or_else(|| self.list.selected_target().copied()),
+                    slot_id: Some(slot_id),
                     anchor: (mouse.column, mouse.row),
                 }))
             }

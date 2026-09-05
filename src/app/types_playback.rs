@@ -27,6 +27,28 @@ pub(super) enum PlaybackTarget {
     Cast(CastPlaybackTarget),
 }
 
+/// Optimistic `active_idx` awaiting player-thread acknowledgement.
+///
+/// `Shift` — a local queue edit relocated the still-playing item to a new
+/// index; its `position_ticks`/`runtime_ticks` in the player status lock stay
+/// valid and are passed through untouched.
+/// `Jump` — a different queue item was selected to play; the status lock still
+/// holds the previous item's position/runtime, so progress is forced to 0/0
+/// until the player thread reconciles the jump.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum PendingActiveIdx {
+    Shift(usize),
+    Jump(usize),
+}
+
+impl PendingActiveIdx {
+    pub(super) fn idx(self) -> usize {
+        match self {
+            Self::Shift(i) | Self::Jump(i) => i,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) struct PlaybackState {
     pub(super) active: bool,
@@ -47,6 +69,32 @@ pub(super) struct PlaybackState {
 pub(crate) enum QueueScope {
     Local,
     Remote,
+}
+
+/// Why the shell armed a one-shot `queue_cursor` push for the next
+/// `sync_queue`, and which queue scope it applies to. `sync_queue` consumes
+/// it (clearing the flag) only when the visible scope matches; a push armed
+/// for a scope the user is not looking at is dropped rather than snapping the
+/// other scope's independent selection.
+///
+/// `Follow` tracks the playhead (local mpv advance, now-playing snap,
+/// projected remote/session queue updates) and yields to an in-progress user
+/// navigation (`queue_cursor_held_by_user`). `Reanchor` is an authoritative
+/// content change (scope switch, full queue replacement, wheel scroll,
+/// jump-to-now-playing) whose regenerated slot identities may collide with the
+/// old ones, so it always wins over slot-identity reconciliation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum QueueCursorPush {
+    Follow(QueueScope),
+    Reanchor(QueueScope),
+}
+
+impl QueueCursorPush {
+    pub(crate) fn scope(self) -> QueueScope {
+        match self {
+            Self::Follow(scope) | Self::Reanchor(scope) => scope,
+        }
+    }
 }
 
 /// Derived answers for the local/remote queue boundary.

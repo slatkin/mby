@@ -1,5 +1,6 @@
 use super::*;
 use crate::app::tests::*;
+use crate::app::types_playback::PendingActiveIdx;
 
 #[test]
 fn move_queue_item_up_swaps_items_and_cursor_follows() {
@@ -236,12 +237,53 @@ fn active_index_prediction_survives_same_length_move_until_player_ack() {
     // length is unchanged, but the active row's predicted index is now 1.
     assert!(app.apply_queue_move(QueueScope::Local, 1, 2));
     assert_eq!(app.effective_playback_state().active_idx, 1);
-    assert_eq!(app.pending_active_idx, Some(1));
+    assert_eq!(app.pending_active_idx, Some(PendingActiveIdx::Shift(1)));
 
     // Once the player status catches up, retain the same displayed index and
     // consume the prediction.
     app.player.status.lock().unwrap().current_idx = 1;
     assert_eq!(app.effective_playback_state().active_idx, 1);
+    assert_eq!(app.pending_active_idx, None);
+}
+
+#[test]
+fn queue_play_cursor_suppresses_stale_progress_until_player_ack() {
+    let _guard = crate::config::TestStateDirGuard::new();
+    let mut app = make_app_stub();
+    app.player_tab
+        .set_items(make_items(5), app.player_tab.queue_cursor);
+    {
+        let mut status = app.player.status.lock().unwrap();
+        status.active = true;
+        status.current_idx = 0;
+        status.queue_len = 5;
+        status.position_ticks = 18_000_000_000; // 30:00
+        status.runtime_ticks = 24_000_000_000; // 40:00
+    }
+
+    app.panel_focus = super::types_settings::PanelFocus::Queue;
+    app.player_tab.queue_cursor = 2;
+    app.dispatch(crate::app::action::Command::QueuePlayCursor(2));
+
+    assert_eq!(app.pending_active_idx, Some(PendingActiveIdx::Jump(2)));
+    let predicted = app.effective_playback_state();
+    assert_eq!(predicted.active_idx, 2);
+    assert_eq!(predicted.position_ticks, 0);
+    assert_eq!(predicted.runtime_ticks, 0);
+
+    // Player thread acks the jump: progress for the new item flows through and
+    // the prediction is consumed.
+    {
+        let mut status = app.player.status.lock().unwrap();
+        status.current_idx = 2;
+        status.queue_len = 5;
+        status.position_ticks = 500_000_000;
+        status.runtime_ticks = 12_000_000_000;
+    }
+    let reconciled = app.effective_playback_state();
+    assert_eq!(reconciled.active_idx, 2);
+    assert_eq!(reconciled.position_ticks, 500_000_000);
+    assert_eq!(reconciled.runtime_ticks, 12_000_000_000);
     assert_eq!(app.pending_active_idx, None);
 }
 

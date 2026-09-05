@@ -1,4 +1,4 @@
-use super::App;
+use super::{App, QueueCursorPush, QueueScope};
 use mbv_core::playback_queue::QueueSlotId;
 use mbv_core::remote_reconciliation::{ReconciliationEffect, RemoteObservation};
 
@@ -128,9 +128,9 @@ impl App {
             selected_slot.and_then(|selected| self.player_tab.queue.slot_index(selected))
         {
             self.player_tab.queue_cursor = index;
-            // Projected removal from an attached session's queue: an
-            // authoritative follow-the-playhead move.
-            self.queue_cursor_pushed = true;
+            // Projected removal from an attached session's queue: a
+            // follow-the-playhead move on the Local-scope queue.
+            self.queue_cursor_pushed = Some(QueueCursorPush::Follow(QueueScope::Local));
         }
         // An attached session must still persist an intentionally empty queue;
         // the ordinary empty-save guard protects unrelated remote-control UI.

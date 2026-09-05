@@ -2,7 +2,7 @@
 //! file within the repository's file-size limit.
 
 use crate::app::notify_actions::ToastSeverity;
-use crate::app::{App, PanelFocus, SessionEvent, SidebarId};
+use crate::app::{App, PanelFocus, QueueCursorPush, QueueScope, SessionEvent, SidebarId};
 use std::time::{Duration, Instant};
 
 impl App {
@@ -131,9 +131,10 @@ impl App {
                                     })
                                 {
                                     self.player_tab.queue_cursor = new_idx;
-                                    // Attached-Emby session item change: an
-                                    // authoritative follow-the-playhead move.
-                                    self.queue_cursor_pushed = true;
+                                    // Attached-Emby session item change: a
+                                    // follow-the-playhead move on Local scope.
+                                    self.queue_cursor_pushed =
+                                        Some(QueueCursorPush::Follow(QueueScope::Local));
                                 }
                             }
                             self.runtime_zero_since = None;

@@ -1,5 +1,5 @@
 use super::notify_actions::ToastSeverity;
-use super::types_playback::PlaylistMutation;
+use super::types_playback::{PendingActiveIdx, PlaylistMutation};
 use super::ui_util::is_playable;
 use super::{
     App, ConfirmAction, ConfirmModal, LibEvent, PendingQueueAction, QueueScope, SessionEvent,
@@ -67,7 +67,7 @@ impl App {
             .push(UndoEntry::Remove(pos, item));
         self.persist_local_queue_state_if_needed(scope);
         if controls_playback_queue && active && pos < current_idx {
-            self.pending_active_idx = Some(current_idx - 1);
+            self.pending_active_idx = Some(PendingActiveIdx::Shift(current_idx - 1));
         }
         let sent_queue_remove = controls_playback_queue
             && (active || scope == QueueScope::Remote || self.player.is_remote());
@@ -200,7 +200,7 @@ impl App {
             };
             if let Some(new_active_idx) = new_active_idx {
                 if new_active_idx != active_idx {
-                    self.pending_active_idx = Some(new_active_idx);
+                    self.pending_active_idx = Some(PendingActiveIdx::Shift(new_active_idx));
                 }
             }
         }
