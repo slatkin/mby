@@ -1,7 +1,7 @@
 ## 1. Projection type
 
-- [ ] 1.1 Add `PlayheadProjection` + `PlayheadConfidence` (`Confirmed | Predicted(PredictionReason)`) and `PredictionReason` (`Relocated | ItemSelected`) to `src/app/types_playback.rs`, folding in the roles of `QueueCursorPush` (scope + Follow/Reanchor) and `PendingActiveIdx` (Shift/Jump). Verify `cargo check -p mbv` compiles the new type with a unit assertion that a `Predicted(Relocated)` projection reports progress and `Predicted(ItemSelected)` reports zero.
-- [ ] 1.2 Replace `App::pending_active_idx` and `App::queue_cursor_pushed` with the single `playhead: PlayheadProjection` field in `src/app/app_struct.rs`; update `construct.rs` and `src/app/tests.rs` stub init. Verify `cargo check -p mbv` fails only at the arm/read sites addressed in groups 2–3.
+- [x] 1.1 Add `PlayheadProjection` + `PlayheadConfidence` (`Confirmed | Predicted(PredictionReason)`) and `PredictionReason` (`Relocated | ItemSelected`) to `src/app/types_playback.rs`, folding in the roles of `QueueCursorPush` (scope + Follow/Reanchor) and `PendingActiveIdx` (Shift/Jump). Verify `cargo check -p mbv` compiles the new type with a unit assertion that a `Predicted(Relocated)` projection reports progress and `Predicted(ItemSelected)` reports zero.
+- [x] 1.2 Replace `App::pending_active_idx` and `App::queue_cursor_pushed` with the single `playhead: PlayheadProjection` field in `src/app/app_struct.rs`; update `construct.rs` and `src/app/tests.rs` stub init. Verify `cargo check -p mbv` fails only at the arm/read sites addressed in groups 2–3.
 
 ## 2. Convert the arm sites (compiler-enumerated)
 
