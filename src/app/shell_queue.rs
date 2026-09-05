@@ -33,7 +33,7 @@ impl Model {
 
         let scope = self.app.visible_queue_scope();
         let slots = self.app.queue_for_scope(scope).slots().to_vec();
-        // An authoritative writer armed `queue_cursor_pushed` for a specific
+        // An authoritative writer armed `playhead.pending_push` for a specific
         // scope. Consume it as a `Set` that wins over slot-identity
         // reconciliation only when that scope is the one on screen: a push
         // armed for a scope the user is not viewing (e.g. a remote daemon
@@ -43,7 +43,7 @@ impl Model {
         // replacement, wheel scroll, jump-to-now-playing) always wins.
         // Anything else is a routine content refresh: `Preserve` the
         // component's own selection pinned to its slot.
-        let cursor = match self.app.queue_cursor_pushed.take() {
+        let cursor = match self.app.playhead.pending_push.take() {
             Some(push) if push.scope() == scope => match push {
                 QueueCursorPush::Follow(_) if self.app.queue_cursor_held_by_user() => {
                     QueueCursorUpdate::Preserve
@@ -379,7 +379,7 @@ mod tests {
         );
 
         // A follow push for the visible scope arms *after* the navigation.
-        model.app.queue_cursor_pushed = Some(QueueCursorPush::Follow(QueueScope::Local));
+        model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Local));
         model.sync_queue();
 
         assert_eq!(
@@ -388,7 +388,7 @@ mod tests {
             "user navigation wins; the follow push must not re-snap to row 0"
         );
         assert!(
-            model.app.queue_cursor_pushed.is_none(),
+            model.app.playhead.pending_push.is_none(),
             "the stale push is cleared"
         );
     }
@@ -408,7 +408,7 @@ mod tests {
         assert_eq!(model.app.visible_queue_scope(), QueueScope::Local);
 
         model.app.player_tab.queue_cursor = 2;
-        model.app.queue_cursor_pushed = Some(QueueCursorPush::Follow(QueueScope::Remote));
+        model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Remote));
         model.sync_queue();
         assert_eq!(
             queue_cursor(&model),
@@ -416,12 +416,12 @@ mod tests {
             "a Remote-scoped push must not move the Local view"
         );
         assert!(
-            model.app.queue_cursor_pushed.is_none(),
+            model.app.playhead.pending_push.is_none(),
             "stale push cleared"
         );
 
         // A push armed for the visible scope still applies.
-        model.app.queue_cursor_pushed = Some(QueueCursorPush::Follow(QueueScope::Local));
+        model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Local));
         model.sync_queue();
         assert_eq!(queue_cursor(&model), 2, "matching-scope push applies");
     }
@@ -445,7 +445,7 @@ mod tests {
             .app
             .replace_playback_queue(crate::app::tests::make_items(4), 1);
         assert_eq!(
-            model.app.queue_cursor_pushed,
+            model.app.playhead.pending_push,
             Some(QueueCursorPush::Reanchor(QueueScope::Local)),
             "a replacement arms a Reanchor push"
         );

@@ -220,6 +220,7 @@ fn displayed_queue_playback_state_stays_active_for_local_daemon_queue() {
         status.runtime_ticks = 84;
         status.paused = true;
     }
+    app.reconcile_playhead();
 
     assert_eq!(
         app.displayed_queue_playback_state(),

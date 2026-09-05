@@ -1,4 +1,4 @@
-use super::types_playback::PendingActiveIdx;
+use super::types_playback::PlayheadConfidence;
 use super::{App, PlaybackTarget};
 use crate::app::render::indicators::IndicatorData;
 
@@ -130,11 +130,44 @@ impl App {
         self.player.status.lock().unwrap().paused
     }
 
-    /// Returns playback state for rendering, consuming an optimistic active
-    /// index only after the player status matches the locally edited queue.
-    /// The mutable receiver is intentional: reconciliation clears the pending
-    /// prediction once the player thread catches up.
-    pub(super) fn effective_playback_state(&mut self) -> super::PlaybackState {
+    /// Reconciles the playhead projection against fresh player status: the one
+    /// place that reads `player.status` for playhead purposes and mutates
+    /// `self.playhead`. Runs once per tick after player events drain, never
+    /// during paint (`queue-canonical-list`: reconciliation does not run during
+    /// paint). Local playback only -- when a remote session or cast owns
+    /// playback the local status snapshot is irrelevant.
+    pub(super) fn reconcile_playhead(&mut self) {
+        if self.connected_session_state.is_some() || self.cast_effective_playback_state().is_some()
+        {
+            return;
+        }
+        let (current_idx, queue_len, position_ticks, runtime_ticks) = {
+            let s = self.player.status.lock().unwrap();
+            (
+                s.current_idx,
+                s.queue_len,
+                s.position_ticks,
+                s.runtime_ticks,
+            )
+        };
+        if matches!(self.playhead.confidence, PlayheadConfidence::Predicted(_))
+            && current_idx == self.playhead.slot
+            && queue_len == self.player_tab.total_queue_len()
+        {
+            self.playhead.confidence = PlayheadConfidence::Confirmed;
+        }
+        // The projection's tick fields ARE this reconciled snapshot (not a
+        // mirror) so branch-3 readers of `effective_playback_state` stay pure.
+        self.playhead.position_ticks = position_ticks;
+        self.playhead.runtime_ticks = runtime_ticks;
+        if matches!(self.playhead.confidence, PlayheadConfidence::Confirmed) {
+            self.playhead.slot = current_idx;
+        }
+    }
+
+    /// Returns playback state for rendering. A pure reader: predictions are
+    /// cleared only by `reconcile_playhead` on the event tick, never here.
+    pub(super) fn effective_playback_state(&self) -> super::PlaybackState {
         if let Some(state) = self.cast_effective_playback_state() {
             state
         } else if let Some(ref remote) = self.connected_session_state {
@@ -164,26 +197,13 @@ impl App {
             }
         } else {
             let s = self.player.status.lock().unwrap();
-            // `suppress_progress` is set only while an unreconciled `Jump`
-            // prediction is showing a different item than the one the player
-            // status still describes — its position/runtime are the previous
-            // item's and would render as stale progress on the new row.
-            let (active_idx, suppress_progress) = match self.pending_active_idx {
-                Some(pending)
-                    if s.current_idx == pending.idx()
-                        && s.queue_len == self.player_tab.total_queue_len() =>
-                {
-                    self.pending_active_idx = None;
-                    (s.current_idx, false)
-                }
-                Some(pending) => (pending.idx(), matches!(pending, PendingActiveIdx::Jump(_))),
-                None => (s.current_idx, false),
+            // Prediction override + progress come from the reconciled
+            // projection; `active`/`paused` are read live off status.
+            let active_idx = match self.playhead.confidence {
+                PlayheadConfidence::Predicted(_) => self.playhead.idx(),
+                PlayheadConfidence::Confirmed => s.current_idx,
             };
-            let (position_ticks, runtime_ticks) = if suppress_progress {
-                (0, 0)
-            } else {
-                (s.position_ticks, s.runtime_ticks)
-            };
+            let (position_ticks, runtime_ticks) = self.playhead.progress();
             super::PlaybackState {
                 active: s.active,
                 active_idx,
@@ -194,7 +214,7 @@ impl App {
         }
     }
 
-    pub(super) fn displayed_queue_playback_state(&mut self) -> super::PlaybackState {
+    pub(super) fn displayed_queue_playback_state(&self) -> super::PlaybackState {
         if self.queue_scope_is_playback(self.visible_queue_scope()) {
             self.effective_playback_state()
         } else {

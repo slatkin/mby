@@ -246,7 +246,37 @@ fn active_index_prediction_survives_same_length_move_until_player_ack() {
     // Once the player status catches up, retain the same displayed index and
     // consume the prediction.
     app.player.status.lock().unwrap().current_idx = 1;
+    app.reconcile_playhead();
     assert_eq!(app.effective_playback_state().active_idx, 1);
+    assert_eq!(app.playhead.confidence, PlayheadConfidence::Confirmed);
+}
+
+#[test]
+fn reconcile_clears_matching_prediction_but_a_paint_read_does_not() {
+    let _guard = crate::config::TestStateDirGuard::new();
+    let mut app = make_app_stub();
+    app.player_tab
+        .set_items(make_items(5), app.player_tab.queue_cursor);
+    {
+        let mut status = app.player.status.lock().unwrap();
+        status.active = true;
+        status.current_idx = 2;
+        status.queue_len = 5;
+    }
+    app.playhead.scope = QueueScope::Local;
+    app.playhead.slot = 2;
+    app.playhead.confidence = PlayheadConfidence::Predicted(PredictionReason::Relocated);
+
+    // A paint read (no reconcile step) must not consume the prediction.
+    let _ = app.effective_playback_state();
+    assert_eq!(
+        app.playhead.confidence,
+        PlayheadConfidence::Predicted(PredictionReason::Relocated),
+        "reading playback state to paint a frame leaves the prediction intact"
+    );
+
+    // The single reconcile step, run on the event tick, clears it.
+    app.reconcile_playhead();
     assert_eq!(app.playhead.confidence, PlayheadConfidence::Confirmed);
 }
 
@@ -288,6 +318,7 @@ fn queue_play_cursor_suppresses_stale_progress_until_player_ack() {
         status.position_ticks = 500_000_000;
         status.runtime_ticks = 12_000_000_000;
     }
+    app.reconcile_playhead();
     let reconciled = app.effective_playback_state();
     assert_eq!(reconciled.active_idx, 2);
     assert_eq!(reconciled.position_ticks, 500_000_000);
