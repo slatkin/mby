@@ -133,7 +133,7 @@ impl App {
                                     self.player_tab.queue_cursor = new_idx;
                                     // Attached-Emby session item change: a
                                     // follow-the-playhead move on Local scope.
-                                    self.queue_cursor_pushed =
+                                    self.playhead.pending_push =
                                         Some(QueueCursorPush::Follow(QueueScope::Local));
                                 }
                             }

@@ -272,7 +272,7 @@ impl App {
                     self.playback_queue_mut().queue_cursor = adjusted;
                     // Local mpv advance: a follow-the-playhead move for the
                     // playback-target scope (yields to an active user nav).
-                    self.queue_cursor_pushed =
+                    self.playhead.pending_push =
                         Some(QueueCursorPush::Follow(self.playback_target_queue_scope()));
                 }
                 if !self.has_direct_remote_queue() {
@@ -323,7 +323,7 @@ impl App {
                         self.playback_queue_mut().queue_cursor = idx;
                         // Auto-advance to the next-up item: a follow-the-playhead
                         // move for the playback-target scope.
-                        self.queue_cursor_pushed = Some(QueueCursorPush::Follow(
+                        self.playhead.pending_push = Some(QueueCursorPush::Follow(
                             self.playback_target_queue_scope(),
                         ));
                         self.flash(label, ToastSeverity::Neutral);
@@ -374,7 +374,7 @@ impl App {
                     // move scoped to the playback target. Consumed only if the
                     // user is currently viewing that scope (a remote daemon
                     // update must not snap a Local-scope view).
-                    self.queue_cursor_pushed =
+                    self.playhead.pending_push =
                         Some(QueueCursorPush::Follow(self.playback_target_queue_scope()));
                 }
             }

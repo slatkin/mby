@@ -1,6 +1,6 @@
 use super::*;
 use crate::app::tests::*;
-use crate::app::types_playback::PendingActiveIdx;
+use crate::app::types_playback::{PlayheadConfidence, PredictionReason};
 
 #[test]
 fn move_queue_item_up_swaps_items_and_cursor_follows() {
@@ -237,13 +237,17 @@ fn active_index_prediction_survives_same_length_move_until_player_ack() {
     // length is unchanged, but the active row's predicted index is now 1.
     assert!(app.apply_queue_move(QueueScope::Local, 1, 2));
     assert_eq!(app.effective_playback_state().active_idx, 1);
-    assert_eq!(app.pending_active_idx, Some(PendingActiveIdx::Shift(1)));
+    assert_eq!(
+        app.playhead.confidence,
+        PlayheadConfidence::Predicted(PredictionReason::Relocated)
+    );
+    assert_eq!(app.playhead.slot, 1);
 
     // Once the player status catches up, retain the same displayed index and
     // consume the prediction.
     app.player.status.lock().unwrap().current_idx = 1;
     assert_eq!(app.effective_playback_state().active_idx, 1);
-    assert_eq!(app.pending_active_idx, None);
+    assert_eq!(app.playhead.confidence, PlayheadConfidence::Confirmed);
 }
 
 #[test]
@@ -265,7 +269,11 @@ fn queue_play_cursor_suppresses_stale_progress_until_player_ack() {
     app.player_tab.queue_cursor = 2;
     app.dispatch(crate::app::action::Command::QueuePlayCursor(2));
 
-    assert_eq!(app.pending_active_idx, Some(PendingActiveIdx::Jump(2)));
+    assert_eq!(
+        app.playhead.confidence,
+        PlayheadConfidence::Predicted(PredictionReason::ItemSelected)
+    );
+    assert_eq!(app.playhead.slot, 2);
     let predicted = app.effective_playback_state();
     assert_eq!(predicted.active_idx, 2);
     assert_eq!(predicted.position_ticks, 0);
@@ -284,7 +292,7 @@ fn queue_play_cursor_suppresses_stale_progress_until_player_ack() {
     assert_eq!(reconciled.active_idx, 2);
     assert_eq!(reconciled.position_ticks, 500_000_000);
     assert_eq!(reconciled.runtime_ticks, 12_000_000_000);
-    assert_eq!(app.pending_active_idx, None);
+    assert_eq!(app.playhead.confidence, PlayheadConfidence::Confirmed);
 }
 
 #[test]

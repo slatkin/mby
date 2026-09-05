@@ -92,7 +92,7 @@ impl App {
         // A full replacement regenerates slot ids, so a preserved prior
         // selection could collide with a new slot; force a re-anchor to the
         // replacement's start index.
-        self.queue_cursor_pushed = Some(QueueCursorPush::Reanchor(QueueScope::Remote));
+        self.playhead.pending_push = Some(QueueCursorPush::Reanchor(QueueScope::Remote));
     }
 
     pub(super) fn sync_playback_queue_after_append(
@@ -162,7 +162,7 @@ impl App {
         // A full replacement regenerates slot ids: a preserved prior selection
         // could collide with an unrelated new slot, so force a re-anchor to
         // the replacement's start index rather than relying on `Preserve`.
-        self.queue_cursor_pushed = Some(QueueCursorPush::Reanchor(
+        self.playhead.pending_push = Some(QueueCursorPush::Reanchor(
             self.playback_target_queue_scope(),
         ));
     }
@@ -312,7 +312,7 @@ impl App {
             // queues hand out colliding `QueueSlotId`s (each is a
             // per-`PlaybackQueue` counter starting at 1), so identity
             // reconciliation can park the cursor on an unrelated slot.
-            self.queue_cursor_pushed = Some(QueueCursorPush::Reanchor(resolved));
+            self.playhead.pending_push = Some(QueueCursorPush::Reanchor(resolved));
         }
         self.queue_scope = resolved;
     }

@@ -130,7 +130,7 @@ impl App {
             self.player_tab.queue_cursor = index;
             // Projected removal from an attached session's queue: a
             // follow-the-playhead move on the Local-scope queue.
-            self.queue_cursor_pushed = Some(QueueCursorPush::Follow(QueueScope::Local));
+            self.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Local));
         }
         // An attached session must still persist an intentionally empty queue;
         // the ordinary empty-save guard protects unrelated remote-control UI.

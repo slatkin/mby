@@ -173,7 +173,7 @@ impl Model {
                         self.app.set_queue_scope(QueueScope::Remote);
                     }
                     // Jump-to-now-playing is an explicit, authoritative move.
-                    self.app.queue_cursor_pushed = Some(QueueCursorPush::Reanchor(
+                    self.app.playhead.pending_push = Some(QueueCursorPush::Reanchor(
                         self.app.playback_target_queue_scope(),
                     ));
                 } else {

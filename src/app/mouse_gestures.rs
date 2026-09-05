@@ -60,7 +60,7 @@ impl App {
             queue.queue_cursor = super::ui_util::move_cursor(queue.queue_cursor, delta * 3, n);
             // The user's own wheel input: the mounted QueueComponent must adopt
             // this index rather than reconciling by slot identity.
-            self.queue_cursor_pushed = Some(QueueCursorPush::Reanchor(scope));
+            self.playhead.pending_push = Some(QueueCursorPush::Reanchor(scope));
         }
     }
 
