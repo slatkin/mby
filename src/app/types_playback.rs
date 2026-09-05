@@ -27,24 +27,90 @@ pub(super) enum PlaybackTarget {
     Cast(CastPlaybackTarget),
 }
 
-/// Optimistic `active_idx` awaiting player-thread acknowledgement.
-///
-/// `Shift` — a local queue edit relocated the still-playing item to a new
-/// index; its `position_ticks`/`runtime_ticks` in the player status lock stay
-/// valid and are passed through untouched.
-/// `Jump` — a different queue item was selected to play; the status lock still
-/// holds the previous item's position/runtime, so progress is forced to 0/0
-/// until the player thread reconciles the jump.
+/// Why an optimistic playhead prediction is not yet confirmed by the playback
+/// owner. Replaces the roles of the former `PendingActiveIdx::Shift` /
+/// `PendingActiveIdx::Jump` respectively.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum PendingActiveIdx {
-    Shift(usize),
-    Jump(usize),
+pub(super) enum PredictionReason {
+    /// A queue edit relocated the still-playing item to a new slot; its
+    /// `position_ticks`/`runtime_ticks` in the player status lock stay valid
+    /// and pass through untouched.
+    Relocated,
+    /// A different queue item was selected to play; the status lock still holds
+    /// the previous item's position/runtime, so progress reports as 0/0 until
+    /// the player thread reconciles.
+    ItemSelected,
 }
 
-impl PendingActiveIdx {
-    pub(super) fn idx(self) -> usize {
-        match self {
-            Self::Shift(i) | Self::Jump(i) => i,
+/// How sure the shell is that the projected playhead slot is the one the
+/// playback owner is actually playing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum PlayheadConfidence {
+    Confirmed,
+    Predicted(PredictionReason),
+}
+
+/// The shell's single source of truth for where playback is, how sure we are,
+/// and the one-shot `queue_cursor` push the next `sync_queue` should apply.
+///
+/// Folds in the former `App::pending_active_idx` (the optimistic active index
+/// awaiting player-thread acknowledgement — now `confidence` plus
+/// `scope`/`slot`/`position_ticks`/`runtime_ticks`) and the former
+/// `App::queue_cursor_pushed` (the scoped one-shot cursor push — now
+/// `pending_push`).
+///
+/// The resting "no prediction, no armed push" state is `confidence: Confirmed`
+/// with `pending_push: None`; `slot`/`position_ticks`/`runtime_ticks` are only
+/// meaningful while `confidence` is `Predicted`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PlayheadProjection {
+    pub(super) scope: QueueScope,
+    pub(super) slot: usize,
+    pub(super) position_ticks: i64,
+    pub(super) runtime_ticks: i64,
+    pub(super) confidence: PlayheadConfidence,
+    /// One-shot cursor push for the next `sync_queue`, scoped to one queue
+    /// scope and consumed only while that scope is visible. `Follow` yields to
+    /// an in-progress user navigation (matching `Predicted(Relocated)`
+    /// follow-the-playhead semantics); `Reanchor` is authoritative and always
+    /// wins.
+    pub(super) pending_push: Option<QueueCursorPush>,
+}
+
+impl PlayheadProjection {
+    /// Resting state: playhead confirmed by the owner, no armed cursor push.
+    pub(super) fn new() -> Self {
+        Self {
+            scope: QueueScope::Local,
+            slot: 0,
+            position_ticks: 0,
+            runtime_ticks: 0,
+            confidence: PlayheadConfidence::Confirmed,
+            pending_push: None,
+        }
+    }
+
+    /// The predicted active slot (former `PendingActiveIdx::idx`).
+    pub(super) fn idx(&self) -> usize {
+        self.slot
+    }
+
+    /// Whether an in-flight prediction forces progress to 0/0: true only for
+    /// `Predicted(ItemSelected)` (former `PendingActiveIdx::Jump`).
+    pub(super) fn suppresses_progress(&self) -> bool {
+        matches!(
+            self.confidence,
+            PlayheadConfidence::Predicted(PredictionReason::ItemSelected)
+        )
+    }
+
+    /// `(position_ticks, runtime_ticks)` as the projection should report them:
+    /// zeroed while `suppresses_progress()`, passed through otherwise.
+    pub(super) fn progress(&self) -> (i64, i64) {
+        if self.suppresses_progress() {
+            (0, 0)
+        } else {
+            (self.position_ticks, self.runtime_ticks)
         }
     }
 }
@@ -302,4 +368,31 @@ pub(super) struct RemoteQueueProjection {
     pub(super) queue_lineage: u64,
     pub(super) occurrence_slots: HashMap<u64, QueueSlotId>,
     pub(super) slot_occurrences: HashMap<QueueSlotId, u64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn relocated_keeps_progress_item_selected_zeroes_it() {
+        let relocated = PlayheadProjection {
+            scope: QueueScope::Local,
+            slot: 3,
+            position_ticks: 500,
+            runtime_ticks: 1000,
+            confidence: PlayheadConfidence::Predicted(PredictionReason::Relocated),
+            pending_push: None,
+        };
+        assert!(!relocated.suppresses_progress());
+        assert_eq!(relocated.progress(), (500, 1000));
+
+        let selected = PlayheadProjection {
+            confidence: PlayheadConfidence::Predicted(PredictionReason::ItemSelected),
+            ..relocated
+        };
+        assert!(selected.suppresses_progress());
+        assert_eq!(selected.progress(), (0, 0));
+        assert_eq!(selected.idx(), 3);
+    }
 }

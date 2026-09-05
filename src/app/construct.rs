@@ -1,4 +1,4 @@
-use super::types_playback::QueueScope;
+use super::types_playback::{PlayheadProjection, QueueScope};
 use super::types_player_tab::PlayerTab;
 use super::types_settings::{PanelFocus, PanelMode};
 use super::types_tab_selection::TabSelection;
@@ -102,7 +102,7 @@ impl App {
             remote_queue_undo_stack: Vec::new(),
             pending_remote_move_cursor: None,
             pending_queue_edit_cursor: None,
-            pending_active_idx: None,
+            playhead: PlayheadProjection::new(),
             next_up_item: None,
             // #361: read the new prefs key, falling back to the pre-#361 one
             // for one release. `power_focus`/`power_left_tab`/`power_left_width`
@@ -201,7 +201,6 @@ impl App {
             tab_scroll: 0,
             last_nav_at: Instant::now() - Duration::from_secs(1),
             last_library_nav_at: Instant::now() - Duration::from_secs(1),
-            queue_cursor_pushed: None,
             library_position_dirty: false,
             library_position_dirty_at: Instant::now() - Duration::from_secs(1),
             refocus_at: None,

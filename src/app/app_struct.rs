@@ -12,7 +12,7 @@ use super::types_feed::SavePlaylistDialog;
 use super::types_feed_tab::FeedTabState;
 use super::types_library_tab::LibraryTab;
 use super::types_playback::{
-    PendingActiveIdx, PendingQueueAction, PlaylistMutationState, QueueCursorPush, QueueScope,
+    PendingQueueAction, PlayheadProjection, PlaylistMutationState, QueueScope,
     RemoteQueueProjection, SuspendedLocalSession, UndoEntry,
 };
 use super::types_player_tab::PlayerTab;
@@ -165,7 +165,11 @@ pub struct App {
     /// state tracks *playback* position, not the UI selection — see
     /// `remove_from_queue` and `PlayerEvent::UnifiedQueueUpdated`.
     pub(super) pending_queue_edit_cursor: Option<usize>,
-    pub(super) pending_active_idx: Option<PendingActiveIdx>,
+    /// Single source of truth for the playback playhead: active scope/slot,
+    /// position/runtime, `Confirmed | Predicted(reason)` confidence, and the
+    /// one-shot scoped `queue_cursor` push for the next `sync_queue`. Folds in
+    /// the former `pending_active_idx` and `queue_cursor_pushed`.
+    pub(super) playhead: PlayheadProjection,
     pub(super) next_up_item: Option<EmbyItem>,
     // Main UI scalars.
     // reuses shared self.libs.
@@ -316,13 +320,6 @@ pub struct App {
     pub(super) marquee_started_at: std::time::Instant,
     pub(super) last_nav_at: Instant,
     pub(super) last_library_nav_at: Instant,
-    /// Set by an authoritative `queue_cursor` write so the next `sync_queue`
-    /// pushes it into `QueueComponent` as a `Set` rather than reconciling by
-    /// slot identity (`QueueCursorUpdate::Preserve`). Carries the scope it was
-    /// armed for (only consumed when that scope is visible) and whether it is a
-    /// playhead `Follow` (yields to active user navigation) or a `Reanchor`
-    /// (always wins). Cleared once consumed or found stale.
-    pub(super) queue_cursor_pushed: Option<QueueCursorPush>,
     /// Set once `library_position_state` has an unflushed in-memory change.
     /// The disk write + shared-document sync are debounced off this rather
     /// than run synchronously on every cursor move -- see
