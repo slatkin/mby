@@ -5,9 +5,9 @@
 
 ## 2. Convert the arm sites (compiler-enumerated)
 
-- [ ] 2.1 Convert the playhead-follow arm sites — `player_event.rs` (mpv advance, next-up auto-advance, `UnifiedQueueUpdated`), `run_loop_events.rs`, `run_loop_events_session.rs` — to set `playhead` with `Predicted(Relocated)` scoped to the playback scope, preserving the existing `queue_cursor_held_by_user()` yield. Verify the retargeted `player_event` / run-loop queue tests pass.
-- [ ] 2.2 Convert the authoritative re-anchor arm sites — `queue_scope.rs` (scope switch, `replace_playback_queue`, `replace_direct_remote_queue`), `mouse_gestures.rs` (wheel scroll), `shell_queue.rs` `PlayNow` — to an authoritative re-anchor on their scope. Verify `tests_queue_reorder.rs` and the `shell_queue` scope-aware / reanchor tests pass.
-- [ ] 2.3 Convert the item-selected arm site — `action.rs` `QueuePlayCursor` jump path — to `Predicted(ItemSelected)`; convert the queue-edit arm sites — `queue_actions.rs` remove and move — to `Predicted(Relocated)`. Verify the play-cursor stale-progress test and `active_index_prediction_survives_same_length_move_until_player_ack` pass.
+- [x] 2.1 Convert the playhead-follow arm sites — `player_event.rs` (mpv advance, next-up auto-advance, `UnifiedQueueUpdated`), `run_loop_events.rs`, `run_loop_events_session.rs` — to set `playhead` with `Predicted(Relocated)` scoped to the playback scope, preserving the existing `queue_cursor_held_by_user()` yield. Verify the retargeted `player_event` / run-loop queue tests pass.
+- [x] 2.2 Convert the authoritative re-anchor arm sites — `queue_scope.rs` (scope switch, `replace_playback_queue`, `replace_direct_remote_queue`), `mouse_gestures.rs` (wheel scroll), `shell_queue.rs` `PlayNow` — to an authoritative re-anchor on their scope. Verify `tests_queue_reorder.rs` and the `shell_queue` scope-aware / reanchor tests pass.
+- [x] 2.3 Convert the item-selected arm site — `action.rs` `QueuePlayCursor` jump path — to `Predicted(ItemSelected)`; convert the queue-edit arm sites — `queue_actions.rs` remove and move — to `Predicted(Relocated)`. Verify the play-cursor stale-progress test and `active_index_prediction_survives_same_length_move_until_player_ack` pass.
 
 ## 3. Reconcile as a tick step; readers stop mutating
 
