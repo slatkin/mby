@@ -11,9 +11,9 @@
 
 ## 3. Reconcile as a tick step; readers stop mutating
 
-- [ ] 3.1 Add `App::reconcile_playhead()` that drops a prediction when `status.current_idx` + `status.queue_len` match it; call it from `src/app/shell_run.rs` immediately after `handle_player_event` drains `player_rx`. Verify a new test: a player event tick clears a matching prediction, and a bare layout tick (no event) does not.
-- [ ] 3.2 Make `effective_playback_state` take `&self` and read the projection instead of running the reconciliation match; update its callers. Verify `cargo check -p mbv` and the indicator/playback-state tests pass.
-- [ ] 3.3 Make `sync_queue`'s cursor decision read `playhead` (scope match + Follow-yields / Reanchor-wins) without clearing it — clearing is now `reconcile_playhead`'s job for predictions and consumption-on-apply for re-anchors. Verify the `shell_queue` push-consumption tests pass unchanged in intent.
+- [x] 3.1 Add `App::reconcile_playhead()` that drops a prediction when `status.current_idx` + `status.queue_len` match it; call it from `src/app/shell_run.rs` immediately after `handle_player_event` drains `player_rx`. Verify a new test: a player event tick clears a matching prediction, and a bare layout tick (no event) does not.
+- [x] 3.2 Make `effective_playback_state` take `&self` and read the projection instead of running the reconciliation match; update its callers. Verify `cargo check -p mbv` and the indicator/playback-state tests pass.
+- [x] 3.3 Make `sync_queue`'s cursor decision read `playhead` (scope match + Follow-yields / Reanchor-wins) without clearing it — clearing is now `reconcile_playhead`'s job for predictions and consumption-on-apply for re-anchors. Verify the `shell_queue` push-consumption tests pass unchanged in intent.
 
 ## 4. Scope accessor pass (separate commit, droppable)
 
