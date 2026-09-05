@@ -449,7 +449,7 @@ impl App {
     /// mutation is the success confirmation; no enqueue success toast is
     /// emitted.
     pub(super) fn append_item_to_queue_and_sync(&mut self, item: EmbyItem) {
-        let scope = self.visible_queue_scope();
+        let scope = self.viewed_queue_scope();
         let appended = item.clone();
         let previous_dirty = self.queue_dirty;
         let previous_queue = self.queue_for_scope(scope).clone();

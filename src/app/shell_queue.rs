@@ -31,7 +31,7 @@ impl Model {
             }
         }
 
-        let scope = self.app.visible_queue_scope();
+        let scope = self.app.viewed_queue_scope();
         let slots = self.app.queue_for_scope(scope).slots().to_vec();
         // An authoritative writer armed `playhead.pending_push` for a specific
         // scope. Consume it as a `Set` that wins over slot-identity
@@ -173,9 +173,8 @@ impl Model {
                         self.app.set_queue_scope(QueueScope::Remote);
                     }
                     // Jump-to-now-playing is an explicit, authoritative move.
-                    self.app.playhead.pending_push = Some(QueueCursorPush::Reanchor(
-                        self.app.playback_target_queue_scope(),
-                    ));
+                    self.app.playhead.pending_push =
+                        Some(QueueCursorPush::Reanchor(self.app.playing_queue_scope()));
                 } else {
                     self.app
                         .flash("Nothing is playing".into(), ToastSeverity::Error);
@@ -405,7 +404,7 @@ mod tests {
         app.panel_focus = PanelFocus::Queue;
         let mut model = Model::new(app);
         model.sync_queue();
-        assert_eq!(model.app.visible_queue_scope(), QueueScope::Local);
+        assert_eq!(model.app.viewed_queue_scope(), QueueScope::Local);
 
         model.app.player_tab.queue_cursor = 2;
         model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Remote));

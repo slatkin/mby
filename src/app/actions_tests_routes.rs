@@ -163,7 +163,7 @@ fn enqueue_selected_rejects_item_from_a_different_route_than_active_queue() {
     // starts with an empty queue and a rejected enqueue must leave it
     // that way.
     assert!(app
-        .queue_for_scope(app.visible_queue_scope())
+        .queue_for_scope(app.viewed_queue_scope())
         .emby_items()
         .is_empty());
     assert!(app.status.contains("Can't mix libraries in a routed queue"));

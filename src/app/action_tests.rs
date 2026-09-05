@@ -338,7 +338,7 @@ fn queue_play_cursor_with_direct_remote_switches_to_remote_scope() {
         app.status
     );
     assert_eq!(
-        app.visible_queue_scope(),
+        app.viewed_queue_scope(),
         QueueScope::Remote,
         "queue scope should switch to Remote when Direct remote control is active"
     );
@@ -365,7 +365,7 @@ fn queue_play_cursor_without_direct_remote_stays_on_local_scope() {
         app.status
     );
     assert_eq!(
-        app.visible_queue_scope(),
+        app.viewed_queue_scope(),
         QueueScope::Local,
         "queue scope should remain Local when there is no Direct remote control"
     );

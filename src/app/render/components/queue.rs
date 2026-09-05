@@ -111,7 +111,7 @@ impl App {
                 .unwrap_or_default(),
             remote_icon: remote_icon.to_string(),
             remote_label: format!("{}{}", remote_label.trim_start(), tracking),
-            local_selected: self.visible_queue_scope() == QueueScope::Local,
+            local_selected: self.viewed_queue_scope() == QueueScope::Local,
             show_split,
             is_mbv_session,
         }

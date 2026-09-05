@@ -48,7 +48,7 @@ impl App {
     }
 
     fn refresh_queue(&mut self) {
-        let scope = self.visible_queue_scope();
+        let scope = self.viewed_queue_scope();
         if self.queue_for_scope(scope).total_queue_len() == 0 {
             return;
         }

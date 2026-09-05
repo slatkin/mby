@@ -64,7 +64,7 @@ fn direct_remote_connect_keeps_local_scope_when_remote_queue_is_empty() {
     app.switch_to_direct_remote(&sess, remote, remote_rx, &stub_endpoint());
 
     assert_eq!(app.queue_scope, QueueScope::Local);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
     assert!(app
         .remote_player_tab
         .as_ref()
@@ -86,7 +86,7 @@ fn direct_remote_connect_switches_to_remote_scope_when_remote_queue_has_items() 
     app.switch_to_direct_remote(&sess, remote, remote_rx, &stub_endpoint());
 
     assert_eq!(app.queue_scope, QueueScope::Remote);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Remote);
     assert_eq!(
         app.remote_player_tab.as_ref().unwrap().emby_items()[0].id,
         remote_items[0].id

@@ -15,7 +15,7 @@ mod queue_actions_playlist_mutation;
 
 impl App {
     pub(super) fn remove_from_queue(&mut self, pos: usize) {
-        let scope = self.visible_queue_scope();
+        let scope = self.viewed_queue_scope();
         let controls_playback_queue = self.queue_scope_is_playback(scope);
         let (active, current_idx) = {
             let s = self.player.status.lock().unwrap();
@@ -126,7 +126,7 @@ impl App {
     /// rather than this function re-reading `queue.queue_cursor` as an
     /// ambient argument channel.
     fn move_queue_item_by(&mut self, from: usize, delta: isize) {
-        let scope = self.visible_queue_scope();
+        let scope = self.viewed_queue_scope();
         let queue = self.queue_for_scope(scope);
         let len = queue.total_queue_len();
         let to = if delta < 0 {
@@ -291,13 +291,13 @@ impl App {
                 source,
             } => {
                 let direct_remote = self.has_direct_remote_queue();
-                if self.local_queue_metadata_applies(self.playback_target_queue_scope()) {
+                if self.local_queue_metadata_applies(self.playing_queue_scope()) {
                     self.queue_source = source;
                 }
                 if !direct_remote {
                     self.replace_playback_queue(items.clone(), start_idx);
                 }
-                self.set_queue_scope(self.playback_target_queue_scope());
+                self.set_queue_scope(self.playing_queue_scope());
                 if let Some(ref conn_id) = self.connected_session_id.clone() {
                     self.clear_playback_overlays();
                     let id = conn_id.clone();
@@ -330,7 +330,7 @@ impl App {
                 }
             }
             PendingQueueAction::ClearQueue => {
-                let scope = self.visible_queue_scope();
+                let scope = self.viewed_queue_scope();
                 let had_items = self.queue_for_scope(scope).total_queue_len() > 0;
                 if self.local_queue_metadata_applies(scope) {
                     self.clear_local_queue_metadata();

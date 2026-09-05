@@ -52,13 +52,13 @@ impl App {
     }
 
     pub(super) fn queue_scope_is_playback(&self, scope: QueueScope) -> bool {
-        scope == self.playback_target_queue_scope()
+        scope == self.playing_queue_scope()
     }
 
     fn action_queue_scope(&self, action: &PendingQueueAction) -> QueueScope {
         match action {
-            PendingQueueAction::PlayItems { .. } => self.playback_target_queue_scope(),
-            PendingQueueAction::ClearQueue => self.visible_queue_scope(),
+            PendingQueueAction::PlayItems { .. } => self.playing_queue_scope(),
+            PendingQueueAction::ClearQueue => self.viewed_queue_scope(),
         }
     }
 
@@ -114,7 +114,7 @@ impl App {
         scope: QueueScope,
         items: Vec<QueueItem>,
     ) -> bool {
-        if items.is_empty() || scope != self.playback_target_queue_scope() {
+        if items.is_empty() || scope != self.playing_queue_scope() {
             return true;
         }
         if !self.player.is_remote() && !self.player.status.lock().unwrap().active {
@@ -140,14 +140,14 @@ impl App {
         true
     }
 
-    pub(super) fn playback_target_queue_scope(&self) -> QueueScope {
+    pub(super) fn playing_queue_scope(&self) -> QueueScope {
         self.queue_scope_resolution().playback_target()
     }
 
     pub(super) fn replace_playback_queue(&mut self, items: Vec<EmbyItem>, cursor: usize) {
         self.retire_remote_tracking(true);
         let cursor = cursor.min(items.len().saturating_sub(1));
-        match self.playback_target_queue_scope() {
+        match self.playing_queue_scope() {
             QueueScope::Local => {
                 self.player_tab.set_items(items, cursor);
             }
@@ -162,29 +162,27 @@ impl App {
         // A full replacement regenerates slot ids: a preserved prior selection
         // could collide with an unrelated new slot, so force a re-anchor to
         // the replacement's start index rather than relying on `Preserve`.
-        self.playhead.pending_push = Some(QueueCursorPush::Reanchor(
-            self.playback_target_queue_scope(),
-        ));
+        self.playhead.pending_push = Some(QueueCursorPush::Reanchor(self.playing_queue_scope()));
     }
 
-    pub(super) fn visible_queue_scope(&self) -> QueueScope {
+    pub(super) fn viewed_queue_scope(&self) -> QueueScope {
         self.queue_scope_resolution().visible_scope()
     }
 
     pub(super) fn displayed_queue(&self) -> &PlayerTab {
-        self.queue_for_scope(self.visible_queue_scope())
+        self.queue_for_scope(self.viewed_queue_scope())
     }
 
     pub(super) fn displayed_queue_mut(&mut self) -> &mut PlayerTab {
-        self.queue_for_scope_mut(self.visible_queue_scope())
+        self.queue_for_scope_mut(self.viewed_queue_scope())
     }
 
     pub(super) fn playback_queue(&self) -> &PlayerTab {
-        self.queue_for_scope(self.playback_target_queue_scope())
+        self.queue_for_scope(self.playing_queue_scope())
     }
 
     pub(super) fn playback_queue_mut(&mut self) -> &mut PlayerTab {
-        self.queue_for_scope_mut(self.playback_target_queue_scope())
+        self.queue_for_scope_mut(self.playing_queue_scope())
     }
 
     pub(super) fn merge_refreshed_queue(
@@ -194,8 +192,8 @@ impl App {
     ) -> RefreshMergeResult {
         let queue_len = self.queue_for_scope(scope).total_queue_len();
         let sync_player_prunes =
-            scope == self.playback_target_queue_scope() && !self.has_direct_remote_queue();
-        let active_index = if scope == self.playback_target_queue_scope() {
+            scope == self.playing_queue_scope() && !self.has_direct_remote_queue();
+        let active_index = if scope == self.playing_queue_scope() {
             let st = self.player.status.lock().unwrap();
             (st.active && st.current_idx < queue_len).then_some(st.current_idx)
         } else {

@@ -273,7 +273,7 @@ impl App {
                     // Local mpv advance: a follow-the-playhead move for the
                     // playback-target scope (yields to an active user nav).
                     self.playhead.pending_push =
-                        Some(QueueCursorPush::Follow(self.playback_target_queue_scope()));
+                        Some(QueueCursorPush::Follow(self.playing_queue_scope()));
                 }
                 if !self.has_direct_remote_queue() {
                     if let Some(item) = self.playback_queue().emby_item_at(adjusted) {
@@ -324,7 +324,7 @@ impl App {
                         // Auto-advance to the next-up item: a follow-the-playhead
                         // move for the playback-target scope.
                         self.playhead.pending_push = Some(QueueCursorPush::Follow(
-                            self.playback_target_queue_scope(),
+                            self.playing_queue_scope(),
                         ));
                         self.flash(label, ToastSeverity::Neutral);
                     } else {
@@ -375,7 +375,7 @@ impl App {
                     // user is currently viewing that scope (a remote daemon
                     // update must not snap a Local-scope view).
                     self.playhead.pending_push =
-                        Some(QueueCursorPush::Follow(self.playback_target_queue_scope()));
+                        Some(QueueCursorPush::Follow(self.playing_queue_scope()));
                 }
             }
             PlayerEvent::IntroStarted { intro_end_ticks } => {

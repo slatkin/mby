@@ -55,7 +55,7 @@ impl App {
     pub(super) fn handle_mouse_scroll_queue(&mut self, delta: i64) {
         let n = self.displayed_queue().total_queue_len();
         if n > 0 {
-            let scope = self.visible_queue_scope();
+            let scope = self.viewed_queue_scope();
             let queue = self.displayed_queue_mut();
             queue.queue_cursor = super::ui_util::move_cursor(queue.queue_cursor, delta * 3, n);
             // The user's own wheel input: the mounted QueueComponent must adopt

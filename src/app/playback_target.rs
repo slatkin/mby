@@ -215,7 +215,7 @@ impl App {
     }
 
     pub(super) fn displayed_queue_playback_state(&self) -> super::PlaybackState {
-        if self.queue_scope_is_playback(self.visible_queue_scope()) {
+        if self.queue_scope_is_playback(self.viewed_queue_scope()) {
             self.effective_playback_state()
         } else {
             super::PlaybackState::default()
