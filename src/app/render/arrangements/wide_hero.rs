@@ -44,7 +44,7 @@ pub(in crate::app) const PANE_PAD_Y: u16 = 1;
 /// screen a second row.
 ///
 /// Geometry is returned by semantic role: `hero` is the ~40% hero/workspace
-/// pane, `browser` is the larger list pane. Physical placement is unchanged.
+/// pane on the right, `browser` is the larger list pane on the left.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::app) struct WideHeroPanes {
     pub browser: Rect,
@@ -55,7 +55,7 @@ pub(in crate::app) fn wide_hero_presentation(content_area: Rect) -> Option<WideH
     (content_area.width >= crate::app::TWO_COLUMN_THRESHOLD
         && content_area.height.saturating_sub(1) >= WIDE_HERO_MIN_AREA_HEIGHT)
         .then(|| {
-            let (mut hero, mut browser) = wide_hero_split(content_area);
+            let (mut browser, mut hero) = wide_hero_split(content_area);
             hero.height = hero.height.saturating_sub(1);
             browser.height = browser.height.saturating_sub(1);
             WideHeroPanes { browser, hero }
@@ -153,29 +153,29 @@ mod tests {
     }
 }
 
-/// Returns `(left_pane, right_pane)` for the Wide hero arrangement's
-/// horizontal split: a `WIDE_HERO_PANE_GAP`-column gutter between a
-/// ~40%-width left (hero) pane and the remaining right (list) pane, each
-/// floored at `WIDE_HERO_MIN_PANE_WIDTH`.
+/// Returns `(browser_pane, hero_pane)` for the Wide hero arrangement's
+/// horizontal split: a `WIDE_HERO_PANE_GAP`-column gutter between the larger
+/// left (list) browser pane and a ~40%-width right (hero) pane, each floored
+/// at `WIDE_HERO_MIN_PANE_WIDTH`.
 pub(in crate::app::render) fn wide_hero_split(content_area: Rect) -> (Rect, Rect) {
-    let left_w = ((content_area.width as u32 * 2 / 5) as u16)
+    let hero_w = ((content_area.width as u32 * 2 / 5) as u16)
         .max(WIDE_HERO_MIN_PANE_WIDTH)
         .min(content_area.width.saturating_sub(WIDE_HERO_MIN_PANE_WIDTH));
-    let right_w = content_area
+    let browser_w = content_area
         .width
-        .saturating_sub(left_w)
+        .saturating_sub(hero_w)
         .saturating_sub(WIDE_HERO_PANE_GAP);
     (
         Rect {
             x: content_area.x,
             y: content_area.y,
-            width: left_w,
+            width: browser_w,
             height: content_area.height,
         },
         Rect {
-            x: content_area.x + left_w + WIDE_HERO_PANE_GAP,
+            x: content_area.x + browser_w + WIDE_HERO_PANE_GAP,
             y: content_area.y,
-            width: right_w,
+            width: hero_w,
             height: content_area.height,
         },
     )
