@@ -13,8 +13,8 @@
 
 ## 3. Trimming allocator
 
-- [ ] 3.1 Add `mimalloc` (default features) to the workspace dependency table and to `crates/mbvd/Cargo.toml` and the root binary's dependencies. Verify `cargo check --workspace` passes.
-- [ ] 3.2 Declare `#[global_allocator] static GLOBAL: MiMalloc = MiMalloc;` in `crates/mbvd/src/main.rs` and in `src/main.rs` — the second is required because `src/local_daemon.rs` runs the same playback loop in-process for Stay-alive. Verify both binaries build and `mbvd --version` runs.
+- [x] 3.1 Add `mimalloc` (default features) to the workspace dependency table and to `crates/mbvd/Cargo.toml` and the root binary's dependencies. Verify `cargo check --workspace` passes.
+- [x] 3.2 Declare `#[global_allocator] static GLOBAL: MiMalloc = MiMalloc;` in `crates/mbvd/src/main.rs` and in `src/main.rs` — the second is required because `src/local_daemon.rs` runs the same playback loop in-process for Stay-alive. Verify both binaries build and `mbvd --version` runs.
 
 ## 4. Gates
 
