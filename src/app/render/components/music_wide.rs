@@ -567,14 +567,16 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
         browser_panel,
     );
     let right_pane = wide_hero::wide_hero_browser_pane(browser_panel, browser_area);
-    if ctx.list.is_search_active() {
+    if !inline_search.is_active() && ctx.list.is_search_active() {
         crate::app::render::components::hero::render_search_box(
             f,
             right_pane.pills_area,
             ctx.list.search_query.as_deref().unwrap_or_default(),
             ctx.list.search_loading,
         );
-    } else if right_pane.pills_area.y + right_pane.pills_area.height <= browser_area.bottom() {
+    } else if !inline_search.is_active()
+        && right_pane.pills_area.y + right_pane.pills_area.height <= browser_area.bottom()
+    {
         crate::app::render::components::music::render_music_group_pills_row_with_ctx(
             f,
             right_pane.pills_area,
@@ -612,7 +614,7 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
             let scroll_in = inline_search.scroll();
             let new_scroll = crate::app::render::render_inline_search(
                 f,
-                Rect::default(),
+                right_pane.pills_area,
                 browser_area,
                 &query,
                 loading,

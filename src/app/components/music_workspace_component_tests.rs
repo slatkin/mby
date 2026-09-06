@@ -668,6 +668,18 @@ fn music_workspace_wide_search_hides_grouped_rows_and_paints_flat_results() {
         !found_heading,
         "no artist heading painted in the search list area"
     );
+    assert!(
+        component.layout().selector_tabs.is_empty(),
+        "group-pill hit regions are unavailable while search is active"
+    );
+    let frame_text: String = (0..buffer.area().height)
+        .flat_map(|y| (0..buffer.area().width).map(move |x| buffer.cell((x, y)).unwrap().symbol()))
+        .collect();
+    assert!(frame_text.contains("SEARCH:"));
+    assert!(
+        !frame_text.contains("┌"),
+        "bordered search input is not painted"
+    );
 
     // The Hero pane (right of the browser pane) remains painted.
     let mut hero_painted = false;
