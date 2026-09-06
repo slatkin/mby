@@ -436,6 +436,10 @@ fn wide_tv_search_paints_in_browser_pane_not_hero_pane() {
     let rendered: String = buffer.content().iter().map(|cell| cell.symbol()).collect();
     assert_eq!(rendered.matches("SEARCH:").count(), 1);
     assert!(
+        component.test_layout().selector_tabs.is_empty(),
+        "selector hit regions are unavailable while search is active"
+    );
+    assert!(
         !rendered.contains("A–C"),
         "ordinary selector must be replaced"
     );

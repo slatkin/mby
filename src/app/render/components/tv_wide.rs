@@ -253,7 +253,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
     }
 
     let right_pane = wide_hero::wide_hero_browser_pane(browser_panel, browser_area);
-    if !ctx.list.is_search_active() && ctx.show_letter_pills {
+    if !ctx.list.is_search_active() && !inline_search.is_active() && ctx.show_letter_pills {
         let selected = ctx
             .list
             .letter_filter
