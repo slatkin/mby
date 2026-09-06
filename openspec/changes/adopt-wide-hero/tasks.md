@@ -23,6 +23,6 @@
 
 ## 5. Synchronize and verify
 
-- [ ] 5.1 Sync every delta spec in this change into its matching current `openspec/specs/<capability>/spec.md`, then normalize retained scenario headings to current Wide hero vocabulary; verify `openspec validate adopt-wide-hero --strict` passes and current specs contain no active `Hero-on-left` contract.
+- [x] 5.1 Sync every delta spec in this change into its matching current `openspec/specs/<capability>/spec.md`, then normalize retained scenario headings to current Wide hero vocabulary; verify `openspec validate adopt-wide-hero --strict` passes and current specs contain no active `Hero-on-left` contract.
 - [ ] 5.2 Run `cargo fmt`, `cargo check -p mbv`, the targeted existing tests, `ast-grep scan`, and `make check-code-file-lines`; verify every command succeeds.
 - [ ] 5.3 Inspect Home, Movies, TV, grouped Music, Emby podcasts/homevideos, Feeds, Audiobookshelf Podcast, and Audiobookshelf Book at Wide, Normal, and Wide-but-short geometry; verify Wide alone has left browser/right hero order while Inline hero, focus, Enter/Esc behavior, selection, and pointer targets remain unchanged.
