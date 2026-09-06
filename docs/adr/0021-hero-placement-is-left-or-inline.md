@@ -1,5 +1,9 @@
 # Hero Placement Is Left Or Inline
 
+> **Superseded by [ADR 0026](0026-wide-hero-placement-pane-arrangement.md).** The
+> responsive presentation is now named **Wide hero** and its panes are browser
+> (left) / hero (right). The accepted decision below stands as history.
+
 Hero-bearing browse surfaces have exactly two supported presentations. When the
 right panel meets the shared width breakpoint and existing minimum-height guard,
 the selected detail is **hero-on-left**: it occupies the left workspace beside a

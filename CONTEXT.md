@@ -373,7 +373,7 @@ The app-wide layout state, one of Mini, Normal, or Wide:
 - **Normal**: both panels visible; a hero-bearing Library panel uses the
   single-column inline hero presentation. Sometimes called "narrow," but only
   from the Library panel's perspective — Normal is the canonical term.
-- **Wide**: both panels visible; a hero-bearing Library panel uses hero-on-left
+- **Wide**: both panels visible; a hero-bearing Library panel uses Wide hero
   when the shared width and minimum-height conditions are met. Non-hero lists
   retain their existing two-column arrangement.
 _Avoid_: layout mode, view mode, panel state, responsive mode, breakpoint mode
@@ -394,15 +394,17 @@ Scrolling budgets the replacement once and hit geometry has one parent target pl
 any explicit child targets.
 _Avoid_: detached detail, repeated row
 
-**Hero-on-left**:
-The sole Wide arrangement for hero-bearing browse surfaces: selected detail
-beside a single-column browser in the right rail. It applies only when the
-shared width breakpoint and minimum-height guard are satisfied; otherwise the
-surface uses Inline hero.
-_Avoid_: separate detail block, split, side-by-side, hero-on-side
+**Wide hero**:
+The sole Wide arrangement for hero-bearing browse surfaces: the single-column
+Library browser and its pills occupy the left pane, and the selected-item hero
+or provider-owned detail workspace occupies the right pane. It applies only when
+the shared width breakpoint and minimum-height guard are satisfied; otherwise
+the surface uses Inline hero.
+_Avoid_: separate detail block, split, side-by-side, hero-on-side, hero-on-left,
+hero-on-right
 
 **Hero pane**:
-The `#333c43` `SURFACE_RESTING` fill of Hero-on-left's left pane — the
+The `#333c43` `SURFACE_RESTING` fill of Wide hero's right pane — the
 container surface itself, independent of what is painted inside it.
 _Avoid_: recessed box, hero panel, detail panel
 
@@ -459,7 +461,7 @@ _Avoid_: layout (bare), component, screen
 **Variant**:
 One of a small, closed set of named presentations for an arrangement or
 component, centrally defined rather than invented per screen — for example
-Inline hero and Hero-on-left are the two variants of the hero presentation. A
+Inline hero and Wide hero are the two variants of the hero presentation. A
 screen selects a variant and supplies data; it does not branch on ad hoc
 per-screen painting logic to fake one.
 _Avoid_: mode (reserved for Panel mode), option
