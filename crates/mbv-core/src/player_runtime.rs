@@ -192,6 +192,127 @@ fn ensure_pipe(path: &str) -> Result<(), String> {
     }
 }
 
+// Snapshotted inputs for a stopped-report job: the values report_stopped
+// captures today before handing off, so the worker never reads ids/status
+// under a lock itself. `is_audio` and `last_valid_pos` are only needed for
+// the log line (`pos` is already the zeroed-for-audio value to send).
+struct StoppedReportData {
+    client: Arc<EmbyClient>,
+    ws_tx: Option<crate::ws::WsSender>,
+    id: ItemId,
+    msid: MediaSourceId,
+    sid: EmbySessionId,
+    is_audio: bool,
+    last_valid_pos: i64,
+    pos: i64,
+    runtime_ticks: i64,
+}
+
+// How a start-report job gets its media_source_id/session_id: either the
+// caller already resolved them synchronously (transition_to), or the fetch
+// is deferred to the worker (transition_to_deferred, for pipe output where
+// even the synchronous get_playback_info call would delay loadfile).
+enum StartIds {
+    Resolved {
+        media_source_id: MediaSourceId,
+        session_id: EmbySessionId,
+    },
+    Deferred {
+        ids: Arc<Mutex<(ItemId, MediaSourceId, EmbySessionId)>>,
+        is_audio: Arc<AtomicBool>,
+    },
+}
+
+// The three jobs SessionReporter used to run on detached per-call threads,
+// now executed FIFO on one worker thread fed by `SessionReporter::job_tx`.
+enum ReportJob {
+    Stopped(StoppedReportData),
+    Start {
+        client: Arc<EmbyClient>,
+        item: EmbyItem,
+        ids: StartIds,
+    },
+    ProgressJoinThenStopped {
+        handle: Option<thread::JoinHandle<()>>,
+        budget: Duration,
+        stopped: Option<StoppedReportData>,
+    },
+}
+
+fn execute_stopped_report(data: StoppedReportData) {
+    let StoppedReportData {
+        client,
+        ws_tx,
+        id,
+        msid,
+        sid,
+        is_audio,
+        last_valid_pos,
+        pos,
+        runtime_ticks,
+    } = data;
+    if let Some(ref tx) = ws_tx {
+        if tx.is_connected() {
+            let _ = tx.flush(Duration::from_secs(1));
+        }
+    }
+    log::info!(target: "player", "report_stopped: item={id} is_audio={is_audio} last_valid_pos={}s sending pos={}s",
+        last_valid_pos / TICKS_PER_SECOND, pos / TICKS_PER_SECOND);
+    let ok = client.report_stopped(&id, &msid, pos, &sid, runtime_ticks);
+    if !ok {
+        log::warn!(target: "player", "transition_to: report_stopped failed for prev item");
+    }
+}
+
+fn run_report_worker(rx: mpsc::Receiver<ReportJob>) {
+    for job in rx {
+        match job {
+            ReportJob::Stopped(data) => execute_stopped_report(data),
+            ReportJob::Start { client, item, ids } => {
+                let (media_source_id, session_id) = match ids {
+                    StartIds::Resolved {
+                        media_source_id,
+                        session_id,
+                    } => (media_source_id, session_id),
+                    StartIds::Deferred { ids, is_audio } => {
+                        let info = client.get_playback_info(&item.id);
+                        {
+                            let mut locked = ids.lock().unwrap_or_else(|e| e.into_inner());
+                            locked.0 = ItemId::new(item.id.clone());
+                            locked.1 = info.media_source_id.clone();
+                            locked.2 = info.session_id.clone();
+                        }
+                        is_audio.store(item.is_audio(), Ordering::Relaxed);
+                        (info.media_source_id, info.session_id)
+                    }
+                };
+                let ok = client.report_start(&item, &media_source_id, &session_id);
+                if !ok {
+                    log::warn!(target: "player", "transition_to: report_start failed for item={}", item.id);
+                }
+            }
+            ReportJob::ProgressJoinThenStopped {
+                handle,
+                budget,
+                stopped,
+            } => {
+                if let Some(h) = handle {
+                    let _ = crate::bounded::run_with_hard_bound(
+                        move || {
+                            let _ = h.join();
+                            Ok::<(), String>(())
+                        },
+                        budget,
+                    );
+                }
+                if let Some(data) = stopped {
+                    execute_stopped_report(data);
+                }
+            }
+        }
+    }
+}
+
 // Shared between the event loop thread and the progress reporter thread.
 // All mutable fields are Arc-wrapped so transitions are visible to both.
 #[derive(Clone)]
@@ -204,6 +325,12 @@ struct SessionReporter {
     // Shared with progress thread so it knows whether to send progress or just ping.
     is_audio: Arc<AtomicBool>,
     status: Arc<Mutex<PlayerStatus>>,
+    // FIFO worker: stopped/start/progress-join jobs are sent here instead of
+    // spawning a detached thread per call, so an outgoing stopped-report and
+    // an incoming start-report can never race out of order (#bound-daemon-
+    // playback-memory). The worker thread ends when every clone's sender
+    // drops.
+    job_tx: mpsc::Sender<ReportJob>,
 }
 
 impl SessionReporter {
@@ -216,13 +343,45 @@ impl SessionReporter {
         is_audio: bool,
         status: Arc<Mutex<PlayerStatus>>,
     ) -> Self {
+        let (job_tx, job_rx) = mpsc::channel::<ReportJob>();
+        thread::spawn(move || run_report_worker(job_rx));
         SessionReporter {
             client,
             ws_tx,
             ids: Arc::new(Mutex::new((item_id, msid, sid))),
             is_audio: Arc::new(AtomicBool::new(is_audio)),
             status,
+            job_tx,
         }
+    }
+
+    // Snapshots the values report_stopped_background/the progress-join job
+    // need, so the worker reads nothing from a shared lock. `None` when the
+    // reporter has no session (feed-only playback), matching has_session's
+    // no-op contract for callers.
+    fn stopped_report_data(&self, last_valid_pos: i64) -> Option<StoppedReportData> {
+        if !self.has_session() {
+            return None;
+        }
+        let (id, msid, sid) = self.ids.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        let is_audio = self.is_audio.load(Ordering::Relaxed);
+        let pos = if is_audio { 0 } else { last_valid_pos };
+        let runtime_ticks = self
+            .status
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .runtime_ticks;
+        Some(StoppedReportData {
+            client: self.client.clone(),
+            ws_tx: self.ws_tx.clone(),
+            id,
+            msid,
+            sid,
+            is_audio,
+            last_valid_pos,
+            pos,
+            runtime_ticks,
+        })
     }
 
     /// Returns `true` when the reporter holds a real Emby session (non-empty
@@ -299,32 +458,9 @@ impl SessionReporter {
     // which report_stopped's synchronous callers don't do — it's bookkeeping
     // that doesn't affect playback).  No-op when the reporter has no session.
     fn report_stopped_background(&self, last_valid_pos: i64) {
-        if !self.has_session() {
-            return;
+        if let Some(data) = self.stopped_report_data(last_valid_pos) {
+            let _ = self.job_tx.send(ReportJob::Stopped(data));
         }
-        let client = self.client.clone();
-        let ws_tx = self.ws_tx.clone();
-        let (id, msid, sid) = self.ids.lock().unwrap_or_else(|e| e.into_inner()).clone();
-        let is_audio = self.is_audio.load(Ordering::Relaxed);
-        let pos = if is_audio { 0 } else { last_valid_pos };
-        let runtime_ticks = self
-            .status
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .runtime_ticks;
-        thread::spawn(move || {
-            if let Some(ref tx) = ws_tx {
-                if tx.is_connected() {
-                    let _ = tx.flush(Duration::from_secs(1));
-                }
-            }
-            log::info!(target: "player", "report_stopped: item={id} is_audio={is_audio} last_valid_pos={}s sending pos={}s",
-                last_valid_pos / TICKS_PER_SECOND, pos / TICKS_PER_SECOND);
-            let ok = client.report_stopped(&id, &msid, pos, &sid, runtime_ticks);
-            if !ok {
-                log::warn!(target: "player", "transition_to: report_stopped failed for prev item");
-            }
-        });
     }
 
     // Fire-and-forget report_start for a new item. Used once transition_to has
@@ -336,15 +472,13 @@ impl SessionReporter {
         media_source_id: &MediaSourceId,
         session_id: &EmbySessionId,
     ) {
-        let client = self.client.clone();
-        let item = item.clone();
-        let media_source_id = media_source_id.clone();
-        let session_id = session_id.clone();
-        thread::spawn(move || {
-            let ok = client.report_start(&item, &media_source_id, &session_id);
-            if !ok {
-                log::warn!(target: "player", "transition_to: report_start failed for item={}", item.id);
-            }
+        let _ = self.job_tx.send(ReportJob::Start {
+            client: self.client.clone(),
+            item: item.clone(),
+            ids: StartIds::Resolved {
+                media_source_id: media_source_id.clone(),
+                session_id: session_id.clone(),
+            },
         });
     }
 
@@ -422,24 +556,13 @@ impl SessionReporter {
     // issued immediately.
     fn transition_to_deferred(&self, new_item: &EmbyItem, last_valid_pos: i64) {
         self.report_stopped_background(last_valid_pos);
-        let client = self.client.clone();
-        let ids = self.ids.clone();
-        let is_audio_flag = self.is_audio.clone();
-        let item = new_item.clone();
-        let new_is_audio = new_item.is_audio();
-        thread::spawn(move || {
-            let info = client.get_playback_info(&item.id);
-            {
-                let mut locked = ids.lock().unwrap_or_else(|e| e.into_inner());
-                locked.0 = ItemId::new(item.id.clone());
-                locked.1 = info.media_source_id.clone();
-                locked.2 = info.session_id.clone();
-            }
-            is_audio_flag.store(new_is_audio, Ordering::Relaxed);
-            let ok = client.report_start(&item, &info.media_source_id, &info.session_id);
-            if !ok {
-                log::warn!(target: "player", "transition_to: report_start failed for item={}", item.id);
-            }
+        let _ = self.job_tx.send(ReportJob::Start {
+            client: self.client.clone(),
+            item: new_item.clone(),
+            ids: StartIds::Deferred {
+                ids: self.ids.clone(),
+                is_audio: self.is_audio.clone(),
+            },
         });
     }
 }

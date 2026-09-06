@@ -51,19 +51,11 @@ impl PlaybackRun {
             let _ = progress.stop_tx.send(());
             let handle = progress.handle.take();
             let budget = self.progress_join_budget();
-            let reporter = self.reporter.clone();
-            let last_valid_pos = self.last_valid_pos;
-            thread::spawn(move || {
-                if let Some(h) = handle {
-                    let _ = crate::bounded::run_with_hard_bound(
-                        move || {
-                            let _ = h.join();
-                            Ok::<(), String>(())
-                        },
-                        budget,
-                    );
-                }
-                reporter.report_stopped_background(last_valid_pos);
+            let stopped = self.reporter.stopped_report_data(self.last_valid_pos);
+            let _ = self.reporter.job_tx.send(ReportJob::ProgressJoinThenStopped {
+                handle,
+                budget,
+                stopped,
             });
             // Fire-and-forget: we can't know synchronously whether Emby accepted
             // this. Treat it as accepted anyway so mark_progress_sync_pending
