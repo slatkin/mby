@@ -11,7 +11,7 @@ use crossterm::event::KeyEvent;
 use super::action::Command;
 use super::components::ComponentId;
 use super::input_resolver::KeyChord;
-use super::key_policy::{command_for_policy, resolve_policy};
+use super::key_policy::{command_for_policy, resolve_policy, KeyPolicyBinding};
 
 pub(super) use super::key_policy::RouterSnapshot;
 
@@ -44,10 +44,11 @@ pub(super) enum RouterOutcome {
 ///    overlay (`snapshot.blocking_overlay_open` is true and the focused id
 ///    is one of the blocking-overlay `ComponentId`s), return `FallThrough`
 ///    so the leaf's request stands.
-/// 2. **Global bindings require no text entry focused.** When the policy
-///    matches a global binding and
-///    `snapshot.text_entry_focused` is true, return `FallThrough` instead
-///    of `Command` so the leaf's character input stands.
+/// 2. **Text entry keeps ordinary characters.** When the policy matches a
+///    global binding and `snapshot.text_entry_focused` is true, return
+///    `FallThrough` instead of `Command` so the leaf's character input stands.
+///    The F1-F4 sidebar bindings remain router-owned so sidebars switch
+///    directly even while Settings or Search text entry is focused.
 ///
 /// The `blocking_overlay_open` catch-all rules stay: they still discard the
 /// focused leaf's message when no overlay is mounted.
@@ -69,7 +70,16 @@ pub(super) fn resolve_router_outcome_with_focused(
         }
         Some(entry) if entry.blocking => RouterOutcome::Swallow,
         Some(entry) => {
-            if snapshot.text_entry_focused && entry.global {
+            if snapshot.text_entry_focused
+                && entry.global
+                && !matches!(
+                    entry.binding,
+                    KeyPolicyBinding::SettingsOpen
+                        | KeyPolicyBinding::SessionsOpen
+                        | KeyPolicyBinding::PlaylistsOpen
+                        | KeyPolicyBinding::HelpOpen
+                )
+            {
                 return RouterOutcome::FallThrough;
             }
             match command_for_policy(entry.binding, chord, snapshot) {
