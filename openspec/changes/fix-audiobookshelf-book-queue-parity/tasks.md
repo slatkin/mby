@@ -1,8 +1,8 @@
 ## 1. Fix shared queue classification
 
-- [ ] 1.1 Preserve both Audiobookshelf `QueueItem` shapes in `PlaybackQueue::merge_refresh` before the Emby identity lookup, and extend the existing refresh test to prove an inactive book retains its slot, order, and progress state.
-- [ ] 1.2 Make `QueueState::without_audiobookshelf` remove episodes and books while retaining Emby and Feed items, and extend its mixed-state test with the existing book fixture.
-- [ ] 1.3 Delete the unused episode-only `is_audiobookshelf_slot` helper, then run `cargo nextest run -p mbv-core playback_queue` to verify the queue changes.
+- [x] 1.1 Preserve both Audiobookshelf `QueueItem` shapes in `PlaybackQueue::merge_refresh` before the Emby identity lookup, and extend the existing refresh test to prove an inactive book retains its slot, order, and progress state.
+- [x] 1.2 Make `QueueState::without_audiobookshelf` remove episodes and books while retaining Emby and Feed items, and extend its mixed-state test with the existing book fixture.
+- [x] 1.3 Delete the unused episode-only `is_audiobookshelf_slot` helper, then run `cargo nextest run -p mbv-core playback_queue` to verify the queue changes.
 
 ## 2. Fix admission and playback projection
 
