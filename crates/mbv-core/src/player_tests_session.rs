@@ -491,8 +491,10 @@ fn transition_enqueues_stopped_report_before_start_report() {
         }
     });
 
-    let mut config = crate::config::Config::default();
-    config.server_url = format!("http://{addr}");
+    let config = crate::config::Config {
+        server_url: format!("http://{addr}"),
+        ..Default::default()
+    };
     let client = Arc::new(EmbyClient::new(config));
     let status = Arc::new(Mutex::new(PlayerStatus::default()));
     let reporter = SessionReporter::new(

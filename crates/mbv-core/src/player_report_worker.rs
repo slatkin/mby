@@ -35,7 +35,7 @@ enum ReportJob {
     Stopped(StoppedReportData),
     Start {
         client: Arc<EmbyClient>,
-        item: EmbyItem,
+        item: Box<EmbyItem>,
         ids: StartIds,
     },
     ProgressJoinThenStopped {
@@ -280,7 +280,7 @@ impl SessionReporter {
     ) {
         let _ = self.job_tx.send(ReportJob::Start {
             client: self.client.clone(),
-            item: item.clone(),
+            item: Box::new(item.clone()),
             ids: StartIds::Resolved {
                 media_source_id: media_source_id.clone(),
                 session_id: session_id.clone(),
@@ -364,7 +364,7 @@ impl SessionReporter {
         self.report_stopped_background(last_valid_pos);
         let _ = self.job_tx.send(ReportJob::Start {
             client: self.client.clone(),
-            item: new_item.clone(),
+            item: Box::new(new_item.clone()),
             ids: StartIds::Deferred {
                 ids: self.ids.clone(),
                 is_audio: self.is_audio.clone(),
