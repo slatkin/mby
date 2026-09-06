@@ -76,6 +76,58 @@ impl Model {
         }
     }
 
+    pub(in crate::app) fn sync_sidebar_overlays(&mut self) {
+        self.update_settings_content();
+        self.update_playlists_content();
+        self.update_sessions_content();
+
+        let panel_area =
+            (self.app.layout.main.panel_area.width > 0).then_some(self.app.layout.main.panel_area);
+        let help_id = ComponentId::Overlay(OverlayId::Help);
+        if let Some(comp) = self.application.get_component_mut(&help_id) {
+            if let Some(help) = comp.as_any_mut().downcast_mut::<HelpComponent>() {
+                help.set_panel_area(panel_area);
+                help.set_destination(self.app.effective_panel_focus(), self.app.tab);
+            }
+        }
+
+        let search_id = Self::search_id();
+        if let Some(comp) = self.application.get_component_mut(&search_id) {
+            if let Some(search) = comp.as_any_mut().downcast_mut::<SearchSidebarComponent>() {
+                search.set_panel_area(panel_area);
+            }
+        }
+    }
+
+    fn update_sessions_content(&mut self) {
+        let id = Self::sessions_id();
+        if !self.application.mounted(&id) {
+            return;
+        }
+        let panel_area =
+            (self.app.layout.main.panel_area.width > 0).then_some(self.app.layout.main.panel_area);
+        let connected_session_id = self.app.connected_session_id.as_deref();
+        let tracking = self.app.remote_tracker.is_some();
+        let cast_attachment_id = self
+            .app
+            .cast_attachment
+            .as_ref()
+            .map(|attachment| attachment.receiver_id.as_str());
+        if let Some(comp) = self.application.get_component_mut(&id) {
+            if let Some(sessions) = comp.as_any_mut().downcast_mut::<SessionsComponent>() {
+                sessions.set_content(
+                    &self.app.panel_targets,
+                    self.app.sessions_loading,
+                    connected_session_id,
+                    tracking,
+                    cast_attachment_id,
+                    self.app.can_disconnect_remote(),
+                    panel_area,
+                );
+            }
+        }
+    }
+
     // --- Help sidebar -------------------------------------------------------
 
     /// Mount the Help overlay and make it the active component. Closes the
@@ -104,20 +156,10 @@ impl Model {
     }
 
     /// Render the Help overlay if mounted, after the legacy `App::render`.
-    /// Sets the component's destination and panel area via downcast so its
-    /// `view()` paints over the legacy frame (design D5/D9).
     pub(in crate::app) fn render_help_overlay(&mut self, f: &mut ratatui::Frame) {
         let help_id = ComponentId::Overlay(OverlayId::Help);
         if !self.application.mounted(&help_id) {
             return;
-        }
-        if let Some(comp) = self.application.get_component_mut(&help_id) {
-            if let Some(help) = comp.as_any_mut().downcast_mut::<HelpComponent>() {
-                let panel_area = (self.app.layout.main.panel_area.width > 0)
-                    .then_some(self.app.layout.main.panel_area);
-                help.set_panel_area(panel_area);
-                help.set_destination(self.app.effective_panel_focus(), self.app.tab);
-            }
         }
         self.application.view(&help_id, f, f.area());
     }
@@ -133,19 +175,11 @@ impl Model {
         ComponentId::Overlay(OverlayId::Search)
     }
 
-    /// Render the Search overlay if mounted. Sets the panel area via
-    /// downcast so the component's `view()` paints over the legacy frame.
+    /// Render the Search overlay if mounted.
     pub(in crate::app) fn render_search_overlay(&mut self, f: &mut ratatui::Frame) {
         let id = Self::search_id();
         if !self.application.mounted(&id) {
             return;
-        }
-        if let Some(comp) = self.application.get_component_mut(&id) {
-            if let Some(search) = comp.as_any_mut().downcast_mut::<SearchSidebarComponent>() {
-                let panel_area = (self.app.layout.main.panel_area.width > 0)
-                    .then_some(self.app.layout.main.panel_area);
-                search.set_panel_area(panel_area);
-            }
         }
         self.application.view(&id, f, f.area());
     }
@@ -196,28 +230,6 @@ impl Model {
         let id = Self::sessions_id();
         if !self.application.mounted(&id) {
             return;
-        }
-        let panel_area =
-            (self.app.layout.main.panel_area.width > 0).then_some(self.app.layout.main.panel_area);
-        let connected_session_id = self.app.connected_session_id.as_deref();
-        let tracking = self.app.remote_tracker.is_some();
-        let cast_attachment_id = self
-            .app
-            .cast_attachment
-            .as_ref()
-            .map(|attachment| attachment.receiver_id.as_str());
-        if let Some(comp) = self.application.get_component_mut(&id) {
-            if let Some(sessions) = comp.as_any_mut().downcast_mut::<SessionsComponent>() {
-                sessions.set_content(
-                    &self.app.panel_targets,
-                    self.app.sessions_loading,
-                    connected_session_id,
-                    tracking,
-                    cast_attachment_id,
-                    self.app.can_disconnect_remote(),
-                    panel_area,
-                );
-            }
         }
         self.application.view(&id, f, f.area());
     }

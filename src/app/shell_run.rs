@@ -10,14 +10,13 @@ impl Model {
         // `sync_home` was deleted (task 5.3d, sync_home mirror deletion):
         // Home content/focus is projected event-driven by
         // `push_home_content` at the seams above.
-        self.update_settings_content();
-        self.sync_playback();
         self.sync_modal_requests();
+        self.sync_sidebar_overlays();
+        self.sync_playback();
         self.sync_feeds();
         self.sync_audiobookshelf_podcast();
         self.sync_audiobookshelf_book();
         self.sync_queue();
-        self.update_playlists_content();
         // Publish wide-TV geometry before other readers of `tv_wide_right_area`/
         // `tv_wide_left_area` (e.g. context-menu anchors) see this frame's
         // values, since those fields are otherwise a previous-frame paint
