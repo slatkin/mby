@@ -596,7 +596,8 @@ fn recursive_album_activation_event_reanchors_onto_the_activated_album() {
             library_id: "lib-music".into(),
             nav_stack,
         });
-    harness.model_mut().music_track_focus_request = Some(true);
+    harness.model_mut().music_track_focus_request =
+        Some(crate::app::shell::MusicTrackFocusRequest::Enter { album_id: "album-1".into() });
     harness.model_mut().music_workspace_reanchor = true;
     harness.model_mut().push_music_workspace_content();
     harness.model_mut().sync_mounted_surfaces();

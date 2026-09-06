@@ -2,7 +2,7 @@ use super::components::{
     BrowserKey, BrowserKind, ComponentId, InlineSearchHost, MusicWorkspaceComponent,
 };
 use super::render::{wide_hero_presentation, MusicWideRenderCtx};
-use super::shell::Model;
+use super::shell::{Model, MusicTrackFocusRequest};
 use super::TabSelection;
 use mbv_core::api::EmbyItem;
 use mbv_core::config::ServiceKind;
@@ -127,12 +127,18 @@ impl Model {
             cursor_scroll.map_or(0, |(cursor, _)| cursor),
             cursor_scroll.map_or(0, |(_, scroll)| scroll),
         );
-        let selected_album = self
-            .application
-            .get_component(id)
-            .and_then(|comp| comp.as_any().downcast_ref::<MusicWorkspaceComponent>())
-            .and_then(MusicWorkspaceComponent::selected_item)
-            .or_else(|| list.selected_item().cloned());
+        // On a re-anchor tick the component's local cursor is still stale (it
+        // is re-pointed below), so the authoritative album is the resting one
+        // -- resolve the track-fetch target from the list, not that cursor.
+        let selected_album = if self.music_workspace_reanchor {
+            list.selected_item().cloned()
+        } else {
+            self.application
+                .get_component(id)
+                .and_then(|comp| comp.as_any().downcast_ref::<MusicWorkspaceComponent>())
+                .and_then(MusicWorkspaceComponent::selected_item)
+                .or_else(|| list.selected_item().cloned())
+        };
         if let Some(album) = selected_album.as_ref() {
             if !self.app.album_tracks_cache.contains_key(&album.id)
                 && !self.app.album_tracks_loading.contains(&album.id)
@@ -162,12 +168,25 @@ impl Model {
                 // Consume the one-shot track-focus request after the content
                 // push, so it cannot be clobbered by `set_content`'s album
                 // identity reset on the same tick.
-                if let Some(request) = self.music_track_focus_request.take() {
-                    if request {
-                        music.enter_track_focus();
-                    } else {
-                        music.clear_track_focus();
+                match self.music_track_focus_request.take() {
+                    Some(MusicTrackFocusRequest::Clear) => music.clear_track_focus(),
+                    Some(MusicTrackFocusRequest::Enter { album_id }) => {
+                        let on_target = music
+                            .selected_item()
+                            .is_some_and(|album| album.id == album_id);
+                        if on_target {
+                            music.enter_track_focus();
+                            // Activation can outrun the album's track fetch;
+                            // keep the request (still bound to this album) so
+                            // the tracks re-push honors it. Narrow never enters,
+                            // so never retries.
+                            if wide && music.track_cursor().is_none() {
+                                self.music_track_focus_request =
+                                    Some(MusicTrackFocusRequest::Enter { album_id });
+                            }
+                        }
                     }
+                    None => {}
                 }
             }
         }

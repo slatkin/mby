@@ -171,7 +171,9 @@ fn recursive_album_activation_enters_track_focus_only_in_wide() {
         .clone()
         .expect("narrow Music workspace mounted");
 
-    model.music_track_focus_request = Some(true);
+    model.music_track_focus_request = Some(MusicTrackFocusRequest::Enter {
+        album_id: "album-1".into(),
+    });
     model.push_music_workspace_content();
     let component = model
         .application
@@ -188,7 +190,9 @@ fn recursive_album_activation_enters_track_focus_only_in_wide() {
 
     model.app.terminal_width = 160;
     model.app.terminal_height = 40;
-    model.music_track_focus_request = Some(true);
+    model.music_track_focus_request = Some(MusicTrackFocusRequest::Enter {
+        album_id: "album-1".into(),
+    });
     model.push_music_workspace_content();
     let component = model
         .application
@@ -202,6 +206,72 @@ fn recursive_album_activation_enters_track_focus_only_in_wide() {
         Some(0),
         "wide recursive activation enters track focus"
     );
+}
+
+#[test]
+fn wide_enter_request_defers_until_the_activated_album_tracks_arrive() {
+    // Activation from Inline Search re-anchors onto an album that was never
+    // hovered, so its tracks are not cached when the one-shot is consumed.
+    // The request stays armed (bound to that album) until the tracks re-push.
+    let mut model = Model::new(make_music_group_app());
+    model.app.layout.main.wide_music_area = ratatui::layout::Rect::new(0, 0, 100, 30);
+    model.app.layout.main.wide_music_right_area = ratatui::layout::Rect::new(50, 0, 50, 30);
+    model.app.terminal_width = 160;
+    model.app.terminal_height = 40;
+    model.sync_music_workspace();
+    model.sync_active_destination();
+    let id = model
+        .music_workspace_id
+        .clone()
+        .expect("wide Music workspace mounted");
+
+    model.music_workspace_reanchor = true;
+    model.music_track_focus_request = Some(MusicTrackFocusRequest::Enter {
+        album_id: "album-1".into(),
+    });
+    model.push_music_workspace_content();
+    {
+        let component = model
+            .application
+            .get_component_mut(&id)
+            .unwrap()
+            .as_any_mut()
+            .downcast_mut::<MusicWorkspaceComponent>()
+            .unwrap();
+        assert_eq!(
+            component.track_cursor(),
+            None,
+            "tracks not cached yet, so track focus cannot be entered"
+        );
+    }
+    assert_eq!(
+        model.music_track_focus_request,
+        Some(MusicTrackFocusRequest::Enter {
+            album_id: "album-1".into()
+        }),
+        "the request stays armed for the activated album"
+    );
+
+    let mut track = crate::app::tests::make_item("Track One", "Audio");
+    track.id = "track-1".into();
+    model
+        .app
+        .album_tracks_cache
+        .insert("album-1".into(), vec![track]);
+    model.push_music_workspace_content();
+    let component = model
+        .application
+        .get_component_mut(&id)
+        .unwrap()
+        .as_any_mut()
+        .downcast_mut::<MusicWorkspaceComponent>()
+        .unwrap();
+    assert_eq!(
+        component.track_cursor(),
+        Some(0),
+        "the tracks re-push honors the deferred request"
+    );
+    assert_eq!(model.music_track_focus_request, None, "request consumed");
 }
 
 #[test]
@@ -232,10 +302,13 @@ fn position_restore_request_clears_track_focus_at_next_sync() {
 
     // The deleted track-focus-clear rehome: a position-restore request
     // clears the component's inline track focus at the next content push.
-    model.music_track_focus_request = Some(false);
+    model.music_track_focus_request = Some(MusicTrackFocusRequest::Clear);
     model.sync_music_workspace();
     model.sync_active_destination();
-    assert_eq!(model.music_track_focus_request, Some(false));
+    assert_eq!(
+        model.music_track_focus_request,
+        Some(MusicTrackFocusRequest::Clear)
+    );
     model.push_music_workspace_content();
     let component = model
         .application
