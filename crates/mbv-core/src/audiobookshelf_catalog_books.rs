@@ -102,11 +102,8 @@ pub(super) fn first_listed_author_sort_key(credit: &str) -> String {
 
 #[derive(Debug, Deserialize)]
 pub(super) struct BooksResponse {
-    #[allow(dead_code)]
     pub(super) page: usize,
-    #[allow(dead_code)]
     pub(super) limit: usize,
-    #[allow(dead_code)]
     pub(super) total: usize,
     #[serde(alias = "items")]
     pub(super) results: Vec<BookWire>,
@@ -114,13 +111,10 @@ pub(super) struct BooksResponse {
 #[derive(Debug, Deserialize)]
 pub(super) struct BookWire {
     #[serde(rename = "id", alias = "libraryItemId")]
-    #[allow(dead_code)]
     pub(super) library_item_id: String,
     #[serde(default)]
-    #[allow(dead_code)]
     pub(super) title: Option<String>,
     #[serde(rename = "coverPath", default)]
-    #[allow(dead_code)]
     pub(super) cover_path: Option<String>,
     #[serde(default)]
     pub(super) media: Option<BookMediaWire>,
@@ -128,22 +122,18 @@ pub(super) struct BookWire {
 #[derive(Debug, Deserialize, Default)]
 pub(super) struct BookMediaWire {
     #[serde(rename = "coverPath", default)]
-    #[allow(dead_code)]
     pub(super) cover_path: Option<String>,
     #[serde(default)]
     pub(super) duration: Option<f64>,
     #[serde(default)]
     pub(super) metadata: Option<BookMetadataWire>,
     #[serde(default)]
-    #[allow(dead_code)]
     pub(super) chapters: Option<Vec<ChapterWire>>,
     #[serde(rename = "audioFiles", default)]
-    #[allow(dead_code)]
     pub(super) audio_files: Option<Vec<AudioFileWire>>,
 }
 #[derive(Debug, Deserialize)]
 pub(super) struct BookMetadataWire {
-    #[allow(dead_code)]
     pub(super) title: Option<String>,
     /// List endpoint uses `authorName` (string); detail endpoint uses
     /// `author` (string) and/or `authors` (list of `{id,name}` objects).
@@ -161,33 +151,23 @@ pub(super) struct BookMetadataWire {
     #[serde(default)]
     pub(super) description: Option<String>,
     #[serde(default, alias = "seriesName")]
-    #[allow(dead_code)]
     pub(super) series_name: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 pub(super) struct AuthorWire {
-    #[allow(dead_code)]
-    pub(super) id: Option<String>,
     pub(super) name: String,
 }
 #[derive(Debug, Deserialize)]
 pub(super) struct ChapterWire {
-    #[allow(dead_code)]
     pub(super) id: usize,
-    #[allow(dead_code)]
     pub(super) start: f64,
-    #[allow(dead_code)]
     pub(super) end: f64,
-    #[allow(dead_code)]
     pub(super) title: String,
 }
 #[derive(Debug, Deserialize)]
 pub(super) struct AudioFileWire {
-    #[allow(dead_code)]
     pub(super) index: usize,
-    #[allow(dead_code)]
     pub(super) ino: String,
-    #[allow(dead_code)]
     pub(super) duration: f64,
 }
 #[derive(Debug, Deserialize)]

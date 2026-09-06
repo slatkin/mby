@@ -165,7 +165,9 @@ impl KeyPolicyGate {
             }
             Self::SessionsSidebarOpen => snapshot.sessions_sidebar_open,
             Self::Playback => {
-                if snapshot.blocking_overlay_open {
+                // Playback shortcuts are single letters (space, o, m, z, a, …);
+                // a focused text entry must keep them as typed characters.
+                if snapshot.blocking_overlay_open || snapshot.text_entry_focused {
                     return false;
                 }
                 let input = InputSnapshot {
@@ -527,6 +529,23 @@ mod tests {
                 .unwrap()
                 .name,
             "playback"
+        );
+
+        // A focused text entry (e.g. Inline Search) keeps every playback letter
+        // as a typed character rather than routing it to a playback command.
+        idle_feed.text_entry_focused = true;
+        assert_eq!(
+            resolve_policy(chord(KeyCode::Char('o'), KeyModifiers::NONE), &idle_feed)
+                .map(|entry| entry.name),
+            None
+        );
+        let mut typing = snapshot();
+        typing.player_active = true;
+        typing.text_entry_focused = true;
+        assert_eq!(
+            resolve_policy(chord(KeyCode::Char(' '), KeyModifiers::NONE), &typing)
+                .map(|entry| entry.name),
+            None
         );
     }
 

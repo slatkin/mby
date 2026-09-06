@@ -288,9 +288,34 @@ impl Model {
                     // component owns the cursor now, so the shell delivers
                     // the same trigger as a one-shot request consumed at the
                     // next sync (wide only -- narrow keeps track focus off).
-                    super::super::LibEvent::RecursiveAlbumActivated { .. } => {
-                        self.app.handle_lib_event(ev);
-                        self.music_track_focus_request = Some(true);
+                    super::super::LibEvent::RecursiveAlbumActivated {
+                        library_id,
+                        nav_stack,
+                    } => {
+                        let library_id_lookup = library_id.clone();
+                        self.app.handle_lib_event(
+                            super::super::LibEvent::RecursiveAlbumActivated {
+                                library_id,
+                                nav_stack,
+                            },
+                        );
+                        // Bind the enter request to the activated album (the
+                        // resting cursor of the replaced nav stack) so it can
+                        // retry once the album's tracks arrive without ever
+                        // firing on an album the user moved to meanwhile.
+                        self.music_track_focus_request = self
+                            .app
+                            .libs
+                            .iter()
+                            .find(|lib| lib.library.id == library_id_lookup)
+                            .and_then(|lib| {
+                                let level = lib.nav_stack.last()?;
+                                level
+                                    .items
+                                    .get(level.resting().cursor())
+                                    .map(|item| item.id.clone())
+                            })
+                            .map(|album_id| MusicTrackFocusRequest::Enter { album_id });
                         // Nav stack was replaced wholesale; its resting cursor
                         // now points at the activated album. Re-anchor the
                         // component explicitly, regardless of prior local moves.
@@ -301,7 +326,7 @@ impl Model {
                     // next sync.
                     super::super::LibEvent::RestoreLibraryPosition { .. } => {
                         self.app.handle_lib_event(ev);
-                        self.music_track_focus_request = Some(false);
+                        self.music_track_focus_request = Some(MusicTrackFocusRequest::Clear);
                         // Saved position restored into the nav stack; re-anchor
                         // the workspace cursor to it at this event rather than
                         // by an equality test on the next content push.

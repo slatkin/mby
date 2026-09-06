@@ -8,7 +8,8 @@
 //! control per destination to shell adapters; it does not choose a
 //! destination or hand out Service/runtime objects.
 //!
-use tuirealm::event::{Key, KeyModifiers, MouseEvent, MouseEventKind};
+use ratatui::layout::Position;
+use tuirealm::event::{Key, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 
 use super::mouse::gesture::{MouseGesture, MouseGestureState};
 use crate::app::layout::LayoutMain;
@@ -82,6 +83,16 @@ pub(in crate::app) enum InlineSearchAction {
     Dismiss,
 }
 
+/// A mouse gesture the shared control resolved onto a result row but cannot
+/// act on itself (design.md D6, decision 1: geometry stays with the owner).
+/// The host translates it into its own item-based context-menu shell request,
+/// resolving the target from [`InlineSearch::selected_item`].
+#[derive(Debug, PartialEq, Eq)]
+pub(in crate::app) enum InlineSearchMouse {
+    /// A right click landed on a result row; the cursor has been moved there.
+    ContextMenu,
+}
+
 /// The shared embedded Inline Search control (design.md D1). Never mounted,
 /// focused, subscribed, or given a `ComponentId`; the host that embeds it
 /// paints through `crate::app::render::render_inline_search` and gives it
@@ -101,6 +112,10 @@ pub(in crate::app) struct InlineSearch {
     layout: LayoutMain,
     /// Private per-host gesture recognition (ADR 0024, design.md D1).
     mouse_gestures: MouseGestureState,
+    /// Origin of an unreleased left press, for recognizing a drag that begins
+    /// in the search bar and releases on a result row (P2: kept local so the
+    /// generic `MouseGestureState` stays inert for every other consumer).
+    left_press: Option<Position>,
 }
 
 impl InlineSearch {
@@ -115,6 +130,7 @@ impl InlineSearch {
             loading: false,
             layout: LayoutMain::default(),
             mouse_gestures: MouseGestureState::new(),
+            left_press: None,
         }
     }
 
@@ -319,22 +335,56 @@ impl InlineSearch {
         None
     }
 
+    /// Move the result cursor to the row painted at `at`, if `at` is inside
+    /// the last painted result area. Returns whether the point was a result
+    /// row.
+    fn select_row_at(&mut self, at: Position) -> bool {
+        if !self.layout.left_area.contains(at) {
+            return false;
+        }
+        let row = at.y.saturating_sub(self.layout.left_area.y) as usize;
+        self.cursor = move_cursor(row, 0, self.order.len());
+        true
+    }
+
     /// Mouse handling (ADR 0024, design.md D6): a left click on a result row
-    /// moves the cursor to that row; every other gesture is a no-op. Resolved
-    /// against the last painted result geometry.
-    pub(in crate::app) fn handle_mouse(&mut self, mouse: &MouseEvent) {
+    /// moves the cursor to that row; a left press that begins outside the
+    /// result area (e.g. in the search bar) and releases on a result row does
+    /// the same. A right click on a result row moves the cursor there and asks
+    /// the host to open its context menu. Every other gesture is a no-op.
+    /// Resolved against the last painted result geometry.
+    pub(in crate::app) fn handle_mouse(&mut self, mouse: &MouseEvent) -> Option<InlineSearchMouse> {
         if matches!(mouse.kind, MouseEventKind::Moved) {
-            return;
+            return None;
         }
-        let Some(gesture) = self.mouse_gestures.recognize(mouse) else {
-            return;
+        let point = Position {
+            x: mouse.column,
+            y: mouse.row,
         };
-        if let MouseGesture::Click(at) | MouseGesture::DoubleClick(at) = gesture {
-            if self.layout.left_area.contains(at) {
-                let row = at.y.saturating_sub(self.layout.left_area.y) as usize;
-                self.cursor = move_cursor(row, 0, self.order.len());
+        match mouse.kind {
+            MouseEventKind::Down(MouseButton::Left) => self.left_press = Some(point),
+            MouseEventKind::Up(MouseButton::Left) => {
+                if let Some(origin) = self.left_press.take() {
+                    if origin != point && !self.layout.left_area.contains(origin) {
+                        self.select_row_at(point);
+                    }
+                }
             }
+            _ => {}
         }
+        let gesture = self.mouse_gestures.recognize(mouse)?;
+        match gesture {
+            MouseGesture::Click(at) | MouseGesture::DoubleClick(at) => {
+                self.select_row_at(at);
+            }
+            MouseGesture::RightClick(at) => {
+                if self.select_row_at(at) {
+                    return Some(InlineSearchMouse::ContextMenu);
+                }
+            }
+            MouseGesture::Scroll { .. } => {}
+        }
+        None
     }
 
     #[cfg(test)]

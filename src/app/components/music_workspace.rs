@@ -11,7 +11,7 @@ use tuirealm::event::{Event, MouseEvent, MouseEventKind};
 use tuirealm::props::{AttrValue, Attribute, QueryResult};
 use tuirealm::state::State;
 
-use super::inline_search::{InlineSearch, InlineSearchHost};
+use super::inline_search::{InlineSearch, InlineSearchHost, InlineSearchMouse};
 use super::media_list::{
     InlineMediaBrowser, MediaKind, MediaListRow, MediaSemanticState, ViewportAnchor, WideMediaList,
 };
@@ -388,8 +388,13 @@ impl MusicWorkspaceComponent {
         // is painted over the same area the ordinary album rail/rows would
         // occupy, so they never mutate for points there.
         if self.inline_search.is_active() {
-            self.inline_search.handle_mouse(mouse);
-            return None;
+            return match self.inline_search.handle_mouse(mouse) {
+                Some(InlineSearchMouse::ContextMenu) => self
+                    .inline_search
+                    .selected_item()
+                    .map(|item| Msg::Shell(ShellRequest::EmbyLibraryContextMenu { item })),
+                None => None,
+            };
         }
         // Music does not consume hover-move (design.md D7).
         if matches!(mouse.kind, MouseEventKind::Moved) {

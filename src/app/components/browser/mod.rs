@@ -17,7 +17,7 @@ use mbv_core::api::EmbyItem;
 
 use super::browser_narrow::NarrowBrowseExtras;
 use super::component_id::BrowserKind;
-use super::inline_search::{InlineSearch, InlineSearchHost};
+use super::inline_search::{InlineSearch, InlineSearchHost, InlineSearchMouse};
 use super::media_list::{
     InlineMediaBrowser, MediaKind, MediaListRow, MediaSemanticState, ViewportAnchor, WideMediaList,
 };
@@ -430,8 +430,13 @@ impl BrowserComponent {
         // is painted over the same area the ordinary list would occupy, so
         // the ordinary list never mutates for points there.
         if self.inline_search.is_active() {
-            self.inline_search.handle_mouse(mouse);
-            return None;
+            return match self.inline_search.handle_mouse(mouse) {
+                Some(InlineSearchMouse::ContextMenu) => self
+                    .inline_search
+                    .selected_item()
+                    .map(|item| Msg::Shell(ShellRequest::BrowserContextMenu { item })),
+                None => None,
+            };
         }
         // Browse does not consume hover-move (design.md D7).
         if matches!(mouse.kind, MouseEventKind::Moved) {

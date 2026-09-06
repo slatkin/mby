@@ -46,6 +46,18 @@ pub(super) struct InlineSearchTransfer {
     pub row_offset: usize,
 }
 
+/// One-shot inline-track-focus transition the shell hands the Music workspace
+/// at the next content push. `Enter` is bound to the album it was raised for,
+/// so a re-anchor that outruns that album's track fetch can retry on the
+/// tracks re-push without ever firing on a different album.
+#[derive(Clone, Debug, PartialEq)]
+pub(super) enum MusicTrackFocusRequest {
+    /// Enter inline track focus for this album (recursive album activation).
+    Enter { album_id: String },
+    /// Clear inline track focus (saved-position restore).
+    Clear,
+}
+
 /// Shell model holding the legacy `App` and the TuiRealm `Application`.
 pub struct Model {
     pub app: App,
@@ -74,11 +86,10 @@ pub struct Model {
     /// One-shot shell→component request for the mounted Music workspace's
     /// inline track focus, applied at the next `sync_music_workspace` after
     /// the component is mounted/synced (so mount-timing never loses it).
-    /// `Some(true)` = enter focus (recursive album activation);
-    /// `Some(false)` = clear focus (position restore). Neither mirrors App
-    /// state: the component owns the cursor, the shell only delivers the
-    /// trigger that used to write the deleted inline track-focus field.
-    pub(super) music_track_focus_request: Option<bool>,
+    /// Neither mirrors App state: the component owns the cursor, the shell
+    /// only delivers the trigger that used to write the deleted inline
+    /// track-focus field.
+    pub(super) music_track_focus_request: Option<MusicTrackFocusRequest>,
     /// One-shot shell→component re-anchor trigger for the mounted Music
     /// workspace's album cursor/scroll, consumed at the next
     /// `push_music_workspace_content`. Set at the three navigation events that

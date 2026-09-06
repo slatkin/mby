@@ -10,8 +10,9 @@ use tuirealm::event::{
 };
 
 use crate::app::components::msg::{ConfirmIntent, PlaybackRequest, ServiceRequest};
+use crate::app::components::inline_search::InlineSearchHost;
 use crate::app::components::{
-    ComponentId, ModalId, Msg, MusicWorkspaceComponent, OverlayId, QueueRequest,
+    ComponentId, ModalId, Msg, MusicWorkspaceComponent, OverlayId, QueueRequest, SearchPool,
     SearchSidebarComponent, ShellRequest, TerminalObserverEvent, UserEvent,
 };
 use crate::app::router::RouterOutcome;
@@ -323,6 +324,28 @@ fn music_track_cursor(harness: &TickHarness, id: &ComponentId) -> Option<usize> 
         .track_cursor()
 }
 
+fn music_workspace<'a>(
+    harness: &'a TickHarness,
+    id: &ComponentId,
+) -> &'a MusicWorkspaceComponent {
+    harness
+        .model()
+        .application
+        .get_component(id)
+        .expect("Music workspace mounted")
+        .as_any()
+        .downcast_ref::<MusicWorkspaceComponent>()
+        .expect("Music workspace type")
+}
+
+fn music_album_cursor(harness: &TickHarness, id: &ComponentId) -> usize {
+    music_workspace(harness, id).album_cursor()
+}
+
+fn music_selected_album_id(harness: &TickHarness, id: &ComponentId) -> Option<String> {
+    music_workspace(harness, id).selected_item().map(|item| item.id)
+}
+
 /// A Library → Queue → Library round trip through real `Application::tick()`:
 /// the Music workspace cannot navigate while Queue holds focus, navigates
 /// immediately when Library focus returns (no click, no content refresh
@@ -389,6 +412,210 @@ fn music_library_queue_library_round_trip_keeps_focus_and_pane_state() {
         music_track_cursor(&harness, &id),
         Some(0),
         "Music navigates immediately once Library focus returns"
+    );
+}
+
+/// Ctrl+A on a selected Inline Search result reaches the focused destination
+/// through a real `Application::tick()`: the text-entry router gate lets the
+/// chord fall through to the workspace, which enqueues the selected result row
+/// rather than the ordinary album cursor.
+#[test]
+fn ctrl_a_on_inline_search_result_enqueues_that_result_through_live_tick() {
+    let (mut harness, id) = wide_music_harness();
+
+    // Open Inline Search from the focused Music workspace.
+    harness.inject(key(Key::Char('/')));
+    harness.step();
+    assert!(harness.model().active_inline_search_is_open());
+
+    // Seed a known result row (the shell content push would otherwise supply
+    // the library's own albums); the cursor rests on it.
+    {
+        let workspace = harness
+            .model_mut()
+            .application
+            .get_component_mut(&id)
+            .expect("Music workspace mounted")
+            .as_any_mut()
+            .downcast_mut::<MusicWorkspaceComponent>()
+            .expect("Music workspace type");
+        let mut result = crate::app::tests::make_item("Result Album", "MusicAlbum");
+        result.id = "result-album".into();
+        workspace
+            .inline_search_mut()
+            .set_pool(SearchPool::Items(vec![result]));
+    }
+
+    harness.inject(Event::Keyboard(KeyEvent {
+        code: Key::Char('a'),
+        modifiers: KeyModifiers::CONTROL,
+    }));
+    let outcome = harness.step();
+    assert!(
+        outcome.messages.iter().any(|msg| matches!(
+            msg,
+            Msg::Shell(ShellRequest::EmbyLibraryEnqueue { item }) if item.id == "result-album"
+        )),
+        "Ctrl+A acts on the selected Inline Search result: {:?}",
+        outcome.messages
+    );
+    assert!(
+        !harness.model().active_inline_search_is_open(),
+        "launching a result exits search so focus is not trapped in the text entry"
+    );
+}
+
+fn album_row(id: &str, name: &str) -> mbv_core::api::EmbyItem {
+    let mut album = crate::app::tests::make_item(name, "MusicAlbum");
+    album.id = id.into();
+    album
+}
+
+/// Enter on an album result is fully asynchronous: `activate_recursive_album`
+/// needs an Emby runtime client (absent in this harness) so it returns `false`,
+/// and the synchronous branch must then change nothing -- the search stays open
+/// and no track-focus / re-anchor one-shot is armed. (Regression: task 2.1's
+/// first cut dismissed the search and armed the flags synchronously, stranding
+/// the user in track-selection on the pre-search album when activation failed.)
+#[test]
+fn enter_on_inline_search_album_result_defers_to_async_activation() {
+    let (mut harness, id) = wide_music_harness();
+
+    harness.inject(key(Key::Char('/')));
+    harness.step();
+    assert!(harness.model().active_inline_search_is_open());
+
+    let album = album_row("album-1", "First Album");
+    harness.model_mut().app.album_indexes.insert(
+        "lib-music".into(),
+        crate::app::AlbumIndexState::Ready(vec![crate::app::AlbumSearchEntry {
+            album: album.clone(),
+            ancestors: Vec::new(),
+            display_label: "First Album".into(),
+            search_text: "first album".into(),
+        }]),
+    );
+    {
+        let workspace = harness
+            .model_mut()
+            .application
+            .get_component_mut(&id)
+            .expect("Music workspace mounted")
+            .as_any_mut()
+            .downcast_mut::<MusicWorkspaceComponent>()
+            .expect("Music workspace type");
+        workspace
+            .inline_search_mut()
+            .set_pool(SearchPool::Albums(vec![crate::app::AlbumSearchEntry {
+                album,
+                ancestors: Vec::new(),
+                display_label: "First Album".into(),
+                search_text: "first album".into(),
+            }]));
+    }
+
+    harness.inject(key(Key::Enter));
+    let outcome = harness.step();
+    let (mut music_resize, mut tv_resize) = (false, false);
+    for message in outcome.messages {
+        harness
+            .model_mut()
+            .handle_terminal_message(message, &mut music_resize, &mut tv_resize);
+    }
+    harness.model_mut().sync_mounted_surfaces();
+
+    assert!(
+        harness.model().active_inline_search_is_open(),
+        "a failed recursive activation leaves Inline Search open"
+    );
+    assert_eq!(
+        music_track_cursor(&harness, &id),
+        None,
+        "a failed recursive activation does not enter track-selection mode"
+    );
+}
+
+/// The `RecursiveAlbumActivated` lib event is the sole owner of the return to
+/// the standard Music presentation: it replaces the nav stack, then re-anchors
+/// the workspace onto the activated album at its natural list position and
+/// enters track-selection for THAT album -- not for whatever album sat under
+/// the pre-search cursor.
+#[test]
+fn recursive_album_activation_event_reanchors_onto_the_activated_album() {
+    let (mut harness, id) = wide_music_harness();
+
+    // Two sibling albums; the pre-search cursor rests on the first.
+    assert_eq!(music_album_cursor(&harness, &id), 0);
+
+    // The async worker replaces the whole nav stack with the resolved path;
+    // its resting cursor points at the activated album (the second sibling,
+    // "album-1", whose tracks the harness has cached).
+    let nav_stack = vec![
+        crate::app::BrowseLevel {
+            parent_id: "lib-music".into(),
+            title: "Music".into(),
+            items: vec![album_row("group-0", "Alpha")],
+            total_count: 1,
+            resting: crate::app::types_browse::BrowseResting::new(0, 0),
+            item_types: None,
+            unplayed_only: false,
+            sort_by: "SortName".into(),
+            sort_order: "Ascending".into(),
+            loading: false,
+            all_items: None,
+            letter_filter: None,
+            music_grouping: None,
+        },
+        crate::app::BrowseLevel {
+            parent_id: "group-0".into(),
+            title: "Alpha".into(),
+            items: vec![
+                album_row("album-0", "Zeroth Album"),
+                album_row("album-1", "First Album"),
+            ],
+            total_count: 2,
+            resting: crate::app::types_browse::BrowseResting::new(1, 0),
+            item_types: None,
+            unplayed_only: false,
+            sort_by: "SortName".into(),
+            sort_order: "Ascending".into(),
+            loading: false,
+            all_items: None,
+            letter_filter: None,
+            music_grouping: None,
+        },
+    ];
+
+    // Drive the production `LibEvent::RecursiveAlbumActivated` arm
+    // (shell_run.rs): App installs the path, then the shell arms the re-anchor
+    // + track-focus one-shots and re-projects the workspace.
+    harness
+        .model_mut()
+        .app
+        .handle_lib_event(crate::app::LibEvent::RecursiveAlbumActivated {
+            library_id: "lib-music".into(),
+            nav_stack,
+        });
+    harness.model_mut().music_track_focus_request =
+        Some(crate::app::shell::MusicTrackFocusRequest::Enter { album_id: "album-1".into() });
+    harness.model_mut().music_workspace_reanchor = true;
+    harness.model_mut().push_music_workspace_content();
+    harness.model_mut().sync_mounted_surfaces();
+
+    assert_eq!(
+        music_album_cursor(&harness, &id),
+        1,
+        "the workspace re-anchors onto the activated album's natural position"
+    );
+    assert_eq!(
+        music_selected_album_id(&harness, &id).as_deref(),
+        Some("album-1"),
+        "the focused album is the activated one, not the pre-search cursor"
+    );
+    assert_eq!(
+        music_track_cursor(&harness, &id),
+        Some(0),
+        "track-selection mode is entered for the activated album"
     );
 }
 

@@ -186,7 +186,6 @@ impl<Target> InlineMediaBrowser<Target> {
     /// Returns `None` for a point outside `list_area` (horizontally too), a
     /// heading/spacer row, an inline detail-block continuation row, or a point
     /// past the last row.
-    #[allow(dead_code)] // consumers land in tasks 3.4-3.6
     pub fn resolve_point(
         &self,
         list_area: Rect,

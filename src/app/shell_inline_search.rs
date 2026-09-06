@@ -272,7 +272,18 @@ impl Model {
                 _ => None,
             };
             if let Some(entry) = entry {
-                self.app.activate_recursive_album(lib_idx, entry);
+                // Enter on an album result returns to the standard library
+                // presentation. `activate_recursive_album` is fully async: it
+                // replaces the nav stack only once `LibEvent::RecursiveAlbumActivated`
+                // drains, and that arm (shell_run.rs) solely owns the Music
+                // workspace re-anchor, the track-selection one-shot, and the
+                // content push -- all against the updated nav stack. Do the
+                // dismiss here only on a successful spawn; on failure leave the
+                // search open and change nothing else.
+                if self.app.activate_recursive_album(lib_idx, entry) {
+                    self.dismiss_active_inline_search();
+                }
+                return;
             }
         } else if let Some(item) =
             selected.filter(|item| item.id == id && item.item_type == item_type)

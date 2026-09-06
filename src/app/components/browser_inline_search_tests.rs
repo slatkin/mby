@@ -65,12 +65,10 @@ fn emby_browser_wide_right_rail_paints_inline_search() {
         code: Key::Char('/'),
         modifiers: KeyModifiers::NONE,
     });
-    browser
-        .inline_search_mut()
-        .set_pool(SearchPool::Items(vec![make_item(
-            "Search Result Alpha",
-            "Movie",
-        )]));
+    browser.inline_search_mut().set_pool(SearchPool::Items(vec![
+        make_item("Search Result Alpha", "Movie"),
+        make_item("Search Result Beta", "Movie"),
+    ]));
 
     let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
     terminal
@@ -135,4 +133,45 @@ fn emby_browser_wide_right_rail_paints_inline_search() {
     }));
     assert_eq!(message, None, "search mouse handling never emits a Msg");
     assert_eq!(browser.inline_search().cursor(), 0);
+
+    // A press that begins in the Inline Search bar (above the result list)
+    // and releases on the second result row still lands on that row, so its
+    // ordinary Ctrl+P/S/A and context-menu actions act on it.
+    browser.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: list_area.x,
+        row: list_area.y.saturating_sub(1),
+        modifiers: KeyModifiers::NONE,
+    }));
+    let message = browser.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Up(MouseButton::Left),
+        column: list_area.x,
+        row: list_area.y + 1,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert_eq!(message, None, "search mouse handling never emits a Msg");
+    assert_eq!(
+        browser.inline_search().cursor(),
+        1,
+        "search-bar-to-row gesture selects the row it ends on"
+    );
+
+    // A right click on the first result row moves the cursor there and asks
+    // the host to open its ordinary item-based context menu for that result
+    // (P1: context-menu actions stay available while search is open).
+    let message = browser.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Right),
+        column: list_area.x,
+        row: list_area.y,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert_eq!(browser.inline_search().cursor(), 0);
+    assert!(
+        matches!(
+            message,
+            Some(Msg::Shell(ShellRequest::BrowserContextMenu { ref item }))
+                if item.name == "Search Result Alpha"
+        ),
+        "right click on a result row opens its context menu: {message:?}"
+    );
 }

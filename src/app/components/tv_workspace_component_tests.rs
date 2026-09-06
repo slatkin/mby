@@ -469,6 +469,56 @@ fn wide_tv_search_paints_in_browser_pane_not_hero_pane() {
     );
 }
 
+/// A right click on an Inline Search result row moves the search cursor there
+/// and asks the host to open its ordinary item-based context menu for that
+/// result (P1: context-menu actions stay available while search is open).
+#[test]
+fn wide_tv_search_right_click_on_result_opens_context_menu() {
+    let mut component = TvWorkspaceComponent::new();
+    component.set_focused(true);
+    let mut series = make_item("Series", "Series");
+    series.id = "series-id".into();
+    component.set_content(TvWideRenderCtx::new(
+        LibraryListRenderCtx::from_items(vec![series], 0, 0),
+        None,
+        None,
+        0,
+        None,
+        true,
+    ));
+    component.on(&Event::Keyboard(KeyEvent {
+        code: Key::Char('/'),
+        modifiers: KeyModifiers::NONE,
+    }));
+    component
+        .inline_search_mut()
+        .set_pool(SearchPool::Items(vec![make_item(
+            "Search Result Alpha",
+            "Series",
+        )]));
+
+    let mut terminal = Terminal::new(TestBackend::new(100, 20)).unwrap();
+    terminal
+        .draw(|frame| component.view(frame, frame.area()))
+        .unwrap();
+    let list_area = component.inline_search().layout().left_area;
+
+    let message = component.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Right),
+        column: list_area.x,
+        row: list_area.y,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert!(
+        matches!(
+            message,
+            Some(Msg::Shell(ShellRequest::EmbyLibraryContextMenu { ref item }))
+                if item.name == "Search Result Alpha"
+        ),
+        "right click on a result row opens its context menu: {message:?}"
+    );
+}
+
 #[test]
 fn dot_with_episode_focus_targets_series() {
     let mut series = make_item("Series", "Series");

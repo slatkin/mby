@@ -24,7 +24,9 @@ impl BrowserComponent {
                     self.inline_search.close();
                     None
                 }
-                None => None,
+                // Ctrl+P/S/A that the shared control does not consume act on
+                // the selected result row via the ordinary result-row effects.
+                None => self.inline_search_result_action(&key),
             };
         }
         match key.code {
@@ -179,6 +181,27 @@ impl BrowserComponent {
             }
         }
         None
+    }
+
+    /// Ctrl+P/S/A on the selected Inline Search result reuse the ordinary
+    /// result-row shell effects, resolved against the search cursor rather than
+    /// the ordinary browse cursor (result-row shortcut actions stay available
+    /// while search is open).
+    fn inline_search_result_action(&mut self, key: &KeyEvent) -> Option<Msg> {
+        if !self.focused || !key.modifiers.contains(KeyModifiers::CONTROL) {
+            return None;
+        }
+        let item = self.inline_search.selected_item()?;
+        let request = match key.code {
+            Key::Char('p') => ShellRequest::BrowserPlay { item },
+            Key::Char('s') => ShellRequest::BrowserShuffle { item },
+            Key::Char('a') => ShellRequest::BrowserEnqueue { item },
+            _ => return None,
+        };
+        // A launched result exits search like Enter activation does; leaving it
+        // open traps focus in the text entry so no other key reaches the shell.
+        self.inline_search.close();
+        Some(Msg::Shell(request))
     }
 
     /// Resolve the item at the component's own local cursor over the mirrored
