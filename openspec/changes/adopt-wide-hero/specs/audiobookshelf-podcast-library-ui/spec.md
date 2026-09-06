@@ -32,7 +32,7 @@ The podcast tab SHALL supply podcast-native data without changing the shared pla
 - **THEN** scrolling keeps its media row and inline detail addressable together
 - **AND** the replacement block owns the selected parent target while explicit child targets take precedence
 
-#### Scenario: Terminal height cannot fit hero-on-left
+#### Scenario: Terminal height cannot fit Wide hero
 
 - **WHEN** the width meets the shared breakpoint but the minimum-height guard fails
 - **THEN** the podcast tab uses selected-row replacement

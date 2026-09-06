@@ -38,6 +38,10 @@ The library list SHALL choose its column count from the width available to the l
 - **WHEN** a non-hero list pane reaches the shared breakpoint
 - **THEN** it MAY render two columns while hero-bearing browsers remain one column
 
+#### Scenario: Wide hero list stays single-column
+- **WHEN** a Wide hero browser is at or above the shared breakpoint
+- **THEN** its left rail SHALL render a single column
+
 ### Requirement: Items flow row-major across columns
 
 The library list SHALL place items in row-major order, so that consecutive items occupy consecutive cells left to right before wrapping to the next row. An item's position SHALL NOT depend on the viewport height. A selected-row replacement SHALL occupy the selected item's flow position and SHALL be budgeted once.

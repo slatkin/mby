@@ -177,7 +177,7 @@ right pane to simulate that reserve.
 - **WHEN** two Wide hero destinations render at the same Wide geometry
 - **THEN** their hero content begins at the same offset from their right pane's edges
 
-### Requirement: Left-pane focus treatment follows one rule
+### Requirement: Pane focus treatment follows one rule
 
 A Wide hero right pane SHALL render the focused surface treatment when, and only when, that
 pane hosts a workspace that can hold focus and that workspace currently holds focus. This rule
@@ -366,6 +366,16 @@ The inline hero SHALL render one content shape across all surfaces: title, optio
 
 - **WHEN** a formerly separate-detail surface crosses the shared breakpoint in either direction
 - **THEN** it switches only between Wide hero and selected-row replacement
+
+#### Scenario: A wide hero screen falls below the breakpoint
+
+- **WHEN** a Wide hero surface crosses below the shared breakpoint
+- **THEN** it renders selected-row replacement with one browser column
+
+#### Scenario: A Wide hero screen falls below the breakpoint
+
+- **WHEN** a Wide hero surface no longer meets either wide geometry condition
+- **THEN** it renders selected-row replacement
 
 ### Requirement: Feeds Wide arrangement is canonical
 The Feeds Service/tab Wide panel SHALL use the canonical one-column `WideMediaList` and preserve the accepted `restore-feeds-service-wide-list` (umbrella task 1.3a) rail framing, surface treatment, and selected-row alignment.
