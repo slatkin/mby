@@ -6,6 +6,29 @@ fn is_clocked_audio_error(error: &libmpv2::Error, audio_device_configured: bool)
         )
 }
 
+/// Whether an `EndFile` is debris from a superseded `JumpTo`.
+///
+/// Pressing Enter on two queue rows in quick succession sends two
+/// `PlayerCommand::JumpTo`s; both are drained before any mpv event, so
+/// `forced_slot_id` holds the *second* target. mpv, meanwhile, may have
+/// briefly started the first target before the second `playlist-pos` write
+/// landed, and emits a `Stop` `EndFile` for it. The real target's own
+/// `EndFile` already consumed `forced_slot_id` and advanced the queue, so
+/// this stray one has no forced marker. Falling through to the
+/// `current_idx + 1` advance would step the active index one past the row
+/// the user actually selected, desyncing the UI from what mpv is playing.
+/// mpv's upcoming `start-file` / `playlist-pos` change is authoritative
+/// instead.
+fn is_superseded_jump_end_file(
+    reason: EndFileReason,
+    has_forced_slot: bool,
+    track_finished: bool,
+) -> bool {
+    !has_forced_slot
+        && !track_finished
+        && (reason == mpv_end_file_reason::Stop || reason == mpv_end_file_reason::Redirect)
+}
+
 impl PlaybackRun {
     fn on_time_pos(&mut self, pos_secs: f64, mpv: &Mpv) {
         let ticks = (pos_secs * TICKS_PER_SECOND as f64) as i64;
@@ -414,6 +437,13 @@ impl PlaybackRun {
         );
         let was_next_up = std::mem::replace(&mut self.next_up_jump, false);
         let track_finished = natural || near_end || was_next_up;
+        if is_superseded_jump_end_file(reason, self.forced_slot_id.is_some(), track_finished) {
+            log::info!(
+                target: "player",
+                "on_end_file: dropping superseded-jump EndFile (reason={reason:?}); mpv drives the next start-file"
+            );
+            return true;
+        }
         // played_out drives mark-played/Emby watched-status and stays video-only;
         // consume_track drives queue auto-removal and is type-agnostic — the app layer
         // gates it per-type against consume_videos/consume_audio.

@@ -156,6 +156,46 @@ fn end_file_quit_uses_shutdown_aware_stop_report_context() {
 }
 
 #[test]
+fn superseded_jump_end_file_is_dropped_only_without_a_forced_slot() {
+    // Rapid Enter on two queue rows: the second JumpTo's slot is the live
+    // `forced_slot_id`; the first target's stray `Stop` EndFile arrives with
+    // none. Only that stray one must be dropped — a `Stop` while a forced
+    // jump is still pending is the real target landing and must advance.
+    assert!(is_superseded_jump_end_file(
+        mpv_end_file_reason::Stop,
+        false,
+        false
+    ));
+    assert!(is_superseded_jump_end_file(
+        mpv_end_file_reason::Redirect,
+        false,
+        false
+    ));
+    assert!(!is_superseded_jump_end_file(
+        mpv_end_file_reason::Stop,
+        true,
+        false
+    ));
+    // A finished track (EOF/near-end/next-up) always advances.
+    assert!(!is_superseded_jump_end_file(
+        mpv_end_file_reason::Stop,
+        false,
+        true
+    ));
+    // A playback error still skips the broken track forward.
+    assert!(!is_superseded_jump_end_file(
+        mpv_end_file_reason::Error,
+        false,
+        false
+    ));
+    assert!(!is_superseded_jump_end_file(
+        mpv_end_file_reason::Eof,
+        false,
+        false
+    ));
+}
+
+#[test]
 fn progress_guard_stop_and_join_bounded_when_thread_hangs() {
     let (stop_tx, _stop_rx) = mpsc::channel();
     let handle = std::thread::spawn(|| {
