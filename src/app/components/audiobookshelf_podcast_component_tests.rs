@@ -148,6 +148,53 @@ fn abs_podcast_component_emits_typed_episode_transitions_in_episode_mode() {
 }
 
 #[test]
+fn abs_podcast_component_cycles_show_title_buckets_with_brackets() {
+    let library = AudiobookshelfLibrary {
+        id: "abs-podcasts".into(),
+        name: "ABS Podcasts".into(),
+        media_type: "podcast".into(),
+    };
+    let mut state = AudiobookshelfBrowseState::new(library);
+    state.append_page(
+        0,
+        20,
+        2,
+        vec![
+            AudiobookshelfShow {
+                library_item_id: "alpha".into(),
+                title: "Alpha".into(),
+                author: None,
+                description: None,
+                cover_path: None,
+            },
+            AudiobookshelfShow {
+                library_item_id: "zulu".into(),
+                title: "Zulu".into(),
+                author: None,
+                description: None,
+                cover_path: None,
+            },
+        ],
+    );
+
+    let mut component = AudiobookshelfPodcastComponent::new();
+    component.set_content(&state, false);
+    component.set_focused(true);
+
+    for (key, index) in [(Key::Char('['), 1), (Key::Char(']'), 0)] {
+        assert_eq!(
+            component.on(&Event::Keyboard(KeyEvent {
+                code: key,
+                modifiers: KeyModifiers::NONE,
+            })),
+            Some(Msg::Shell(ShellRequest::AudiobookshelfPodcastShowMove {
+                index
+            }))
+        );
+    }
+}
+
+#[test]
 fn abs_podcast_component_emits_typed_action_intents_without_raw_key_replay() {
     let state = &crate::app::tests_podcast::audiobookshelf_app().audiobookshelf_browse[0];
     let mut component = AudiobookshelfPodcastComponent::new();

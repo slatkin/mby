@@ -202,6 +202,24 @@ impl AudiobookshelfPodcastComponent {
         self.select_show(next);
     }
 
+    fn cycle_show_bucket(&mut self, delta: i64) {
+        let buckets =
+            crate::app::types_audiobookshelf_browse::build_show_title_buckets(&self.state.shows);
+        if buckets.is_empty() {
+            return;
+        }
+        let current = buckets
+            .iter()
+            .position(|bucket| {
+                self.state.cursor() >= bucket.start && self.state.cursor() < bucket.end
+            })
+            .unwrap_or(0);
+        let next = (current as i64 + delta).rem_euclid(buckets.len() as i64) as usize;
+        if let Some(bucket) = buckets.get(next) {
+            self.select_show(bucket.start);
+        }
+    }
+
     /// The resolved-index show-move request for the cursor the component just
     /// landed on (split-audiobookshelf-cursor-ownership D1). Every show-list
     /// key resolves its own movement locally and carries only the result.
@@ -250,6 +268,14 @@ impl AudiobookshelfPodcastComponent {
                 self.select_show(self.state.shows.len().saturating_sub(1));
                 Some(self.show_move_request())
             }
+            Key::Char('[') if self.episode_selection.is_none() && key.modifiers.is_empty() => {
+                self.cycle_show_bucket(-1);
+                Some(self.show_move_request())
+            }
+            Key::Char(']') if self.episode_selection.is_none() && key.modifiers.is_empty() => {
+                self.cycle_show_bucket(1);
+                Some(self.show_move_request())
+            }
             Key::Up | Key::Char('k') => {
                 self.move_episode(-1);
                 Some(Msg::Shell(
@@ -266,7 +292,7 @@ impl AudiobookshelfPodcastComponent {
                     ),
                 ))
             }
-            Key::Char('[') if self.episode_selection.is_some() => {
+            Key::Char('[') if self.episode_selection.is_some() && key.modifiers.is_empty() => {
                 self.cycle_filter(-1);
                 Some(Msg::Shell(
                     ShellRequest::AudiobookshelfPodcastEpisodeTransition(
@@ -274,7 +300,7 @@ impl AudiobookshelfPodcastComponent {
                     ),
                 ))
             }
-            Key::Char(']') if self.episode_selection.is_some() => {
+            Key::Char(']') if self.episode_selection.is_some() && key.modifiers.is_empty() => {
                 self.cycle_filter(1);
                 Some(Msg::Shell(
                     ShellRequest::AudiobookshelfPodcastEpisodeTransition(
