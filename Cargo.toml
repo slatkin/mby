@@ -3,7 +3,7 @@ members = ["crates/mbv-core", "crates/mbvd"]
 default-members = [".", "crates/mbv-core", "crates/mbvd"]
 
 [workspace.package]
-version = "0.17.17"
+version = "0.18.0"
 edition = "2021"
 rust-version = "1.88"
 
