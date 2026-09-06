@@ -48,7 +48,7 @@ impl MusicWorkspaceComponent {
     /// Ctrl+P/S/A on the selected Inline Search result reuse the ordinary
     /// library result-row effects, resolved against the search cursor (result-
     /// row shortcut actions stay available while search is open).
-    fn inline_search_result_action(&self, key: &tuirealm::event::KeyEvent) -> Option<Msg> {
+    fn inline_search_result_action(&mut self, key: &tuirealm::event::KeyEvent) -> Option<Msg> {
         if !self.context.focused || !key.modifiers.contains(KeyModifiers::CONTROL) {
             return None;
         }
@@ -59,6 +59,9 @@ impl MusicWorkspaceComponent {
             Key::Char('a') => ShellRequest::EmbyLibraryEnqueue { item },
             _ => return None,
         };
+        // A launched result exits search like Enter activation does; leaving it
+        // open traps focus in the text entry so no other key reaches the shell.
+        self.inline_search.close();
         Some(Msg::Shell(request))
     }
 

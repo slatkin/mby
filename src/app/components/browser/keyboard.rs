@@ -187,7 +187,7 @@ impl BrowserComponent {
     /// result-row shell effects, resolved against the search cursor rather than
     /// the ordinary browse cursor (result-row shortcut actions stay available
     /// while search is open).
-    fn inline_search_result_action(&self, key: &KeyEvent) -> Option<Msg> {
+    fn inline_search_result_action(&mut self, key: &KeyEvent) -> Option<Msg> {
         if !self.focused || !key.modifiers.contains(KeyModifiers::CONTROL) {
             return None;
         }
@@ -198,6 +198,9 @@ impl BrowserComponent {
             Key::Char('a') => ShellRequest::BrowserEnqueue { item },
             _ => return None,
         };
+        // A launched result exits search like Enter activation does; leaving it
+        // open traps focus in the text entry so no other key reaches the shell.
+        self.inline_search.close();
         Some(Msg::Shell(request))
     }
 

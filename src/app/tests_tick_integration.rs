@@ -459,6 +459,10 @@ fn ctrl_a_on_inline_search_result_enqueues_that_result_through_live_tick() {
         "Ctrl+A acts on the selected Inline Search result: {:?}",
         outcome.messages
     );
+    assert!(
+        !harness.model().active_inline_search_is_open(),
+        "launching a result exits search so focus is not trapped in the text entry"
+    );
 }
 
 fn album_row(id: &str, name: &str) -> mbv_core::api::EmbyItem {
