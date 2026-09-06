@@ -518,6 +518,9 @@ fn init_mpv(config: &MpvRunConfig) -> Result<(Mpv, bool), String> {
     if config.headless {
         let _ = mpv.set_property("vo", "null");
         let _ = mpv.set_property("force-window", "no");
+        // #656: with vo=null, attached cover art would still be selected and
+        // decoded (video/image=true per audio track) for no benefit.
+        let _ = mpv.set_property("audio-display", "no");
     }
     let mut startup_pause_armed = false;
     if let Some(path) = &config.audio_pipe_path {

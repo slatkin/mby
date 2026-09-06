@@ -293,6 +293,29 @@ fn init_mpv_projects_mutually_exclusive_output() {
 }
 
 #[test]
+fn init_mpv_headless_disables_cover_art_display() {
+    // Issue #656: headless playback (vo=null) must not select and decode
+    // attached cover art (video/image=true per audio track). Real (headless)
+    // mpv init, serialized on SYS_ENV_LOCK like the other init_mpv tests.
+    let env_lock = crate::config::tests::SYS_ENV_LOCK.lock().unwrap();
+    let (mpv, _) = init_mpv(&MpvRunConfig {
+        headless: true,
+        use_mpv_config: false,
+        no_scripts: true,
+        always_skip_intro: false,
+        audio_pipe_path: None,
+        audio_pipe_samplerate: 0,
+        audio_pipe_bitdepth: 0,
+        audio_device: None,
+    })
+    .unwrap();
+    assert_eq!(mpv.get_property::<String>("audio-display").unwrap(), "no");
+    mpv.set_property("ao", "null").unwrap();
+    drop(mpv);
+    drop(env_lock);
+}
+
+#[test]
 fn mpv_audio_errors_only_classify_alsa_initialization_failures() {
     assert!(is_clocked_audio_error(
         &libmpv2::Error::Raw(libmpv2::mpv_error::AoInitFailed),
