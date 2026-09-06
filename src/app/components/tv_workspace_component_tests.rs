@@ -394,7 +394,7 @@ fn slash_emits_open_inline_search() {
 /// the shared bordered input/result painter lands in the series rail, not
 /// the episode/Hero pane to its left, which remains visible.
 #[test]
-fn wide_tv_search_paints_in_right_rail_not_left_pane() {
+fn wide_tv_search_paints_in_browser_pane_not_hero_pane() {
     let mut component = TvWorkspaceComponent::new();
     component.set_focused(true);
     let mut series = make_item("Series", "Series");
@@ -428,8 +428,8 @@ fn wide_tv_search_paints_in_right_rail_not_left_pane() {
     let left_pane = component.test_layout().tv_wide_left_area;
     assert!(list_area.width > 0 && list_area.height > 0);
     assert!(
-        list_area.x >= left_pane.x + left_pane.width,
-        "search paints in the right rail, after the episode/Hero pane: \
+        list_area.x + list_area.width <= left_pane.x,
+        "search paints in the browser pane, before the episode/Hero pane: \
          list_area={list_area:?} left_pane={left_pane:?}"
     );
 
@@ -450,7 +450,10 @@ fn wide_tv_search_paints_in_right_rail_not_left_pane() {
             found_in_left_pane = true;
         }
     }
-    assert!(found_in_rail, "search result row painted in the right rail");
+    assert!(
+        found_in_rail,
+        "search result row painted in the browser pane"
+    );
     assert!(
         !found_in_left_pane,
         "search result must not paint in the episode/Hero pane"

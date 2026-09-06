@@ -1,10 +1,10 @@
-//! Characterization tests (task 1.1, standardize-Wide hero-pane): pin the
-//! *current* Wide left-pane output of all seven Wide hero destinations
+//! Characterization tests (task 1.1, standardize-Wide-hero-pane): pin the
+//! *current* Wide browser-pane output of all seven Wide hero destinations
 //! before any paint/primitive change lands. These intentionally capture
 //! today's drifted behaviour (the Home clamp, ABS Podcasts' missing fill, ABS
 //! Books' foreground-only `.style(Color)` bug, Feeds' conditional fill) as-is
 //! -- they are a baseline to diff phases 2/3 against, not a statement of
-//! correct behaviour. Must land in its own commit before any hero-left paint
+//! correct behaviour. Must land in its own commit before any Wide hero paint
 //! or primitive change (ledger migration flow).
 
 use super::test_helpers::{buffer_to_string, make_audiobookshelf_book_app, make_music_group_app};

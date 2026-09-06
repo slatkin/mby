@@ -76,15 +76,11 @@ mod tests {
             height: WIDE_HERO_MIN_AREA_HEIGHT + 1,
         });
         assert!(wide.is_some());
-        let Some(WideHeroPanes {
-            hero: left,
-            browser: right,
-        }) = wide
-        else {
+        let Some(WideHeroPanes { browser, hero }) = wide else {
             unreachable!();
         };
-        assert_eq!(left.x, 3);
-        assert_eq!(right.x, left.right() + 2);
+        assert_eq!(browser.x, 3);
+        assert_eq!(hero.x, browser.right() + 2);
 
         assert!(wide_hero_presentation(Rect {
             x: 0,

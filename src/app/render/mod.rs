@@ -236,8 +236,8 @@ mod tests_conformance_matrix;
 #[cfg(test)]
 mod tests_feeds;
 #[cfg(test)]
-mod tests_hero_left_pane_characterization;
-#[cfg(test)]
 mod tests_home_inline;
 #[cfg(test)]
 mod tests_selection_modal;
+#[cfg(test)]
+mod tests_wide_hero_pane_characterization;

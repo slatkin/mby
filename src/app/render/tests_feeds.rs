@@ -79,13 +79,14 @@ fn terminal_for(component: &mut FeedsComponent, width: u16, height: u16) -> Term
 }
 
 #[test]
-fn wide_feeds_use_a_left_detail_and_right_entry_workspace() {
+fn wide_feeds_use_a_left_entry_browser_and_right_detail_workspace() {
     // Canonical characterization: the parent paints the Wide hero detail
-    // pane and frames the right rail; the canonical `WideMediaList` paints the
-    // grouped rows into the inset sub-rect. Observable intent preserved from
-    // the legacy painter: left-detail/right-entry split, framed rail with a
-    // reserved bottom border, a non-selectable grouping heading, and the two
-    // entry rows left-aligned to the same column with the selected row filled.
+    // pane and frames the entry browser; the canonical `WideMediaList` paints
+    // the grouped rows into the inset sub-rect. Observable intent preserved
+    // from the legacy painter: left-entry/right-detail split, framed browser
+    // with a reserved bottom border, a non-selectable grouping heading, and the
+    // two entry rows left-aligned to the same column with the selected row
+    // filled.
     for width in [82, 120] {
         let mut component = feed_component();
         let terminal = terminal_for(&mut component, width, 30);
@@ -97,7 +98,7 @@ fn wide_feeds_use_a_left_detail_and_right_entry_workspace() {
             layout.hero_area
         );
         assert!(
-            layout.left_area.x > layout.hero_area.x,
+            layout.left_area.x < layout.hero_area.x,
             "hero={:?} list={:?}",
             layout.hero_area,
             layout.left_area
