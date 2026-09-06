@@ -112,7 +112,6 @@ impl<Target: Clone> WideMediaList<Target> {
     /// painter consumes, so the hit flow can never drift from the painted one.
     /// Returns `None` for a point outside `list_area` (horizontally too), a
     /// heading/spacer row, or a point past the last row.
-    #[allow(dead_code)] // consumers land in tasks 3.4-3.6
     pub fn resolve_point(&self, list_area: Rect, point: Position) -> Option<&Target> {
         if !list_area.contains(point) {
             return None;
@@ -130,7 +129,6 @@ impl<Target: Clone> WideMediaList<Target> {
     /// `NavLevel::set_resting_cursor`. Returns `None` for a `y` outside the
     /// vertical span of `list_area`, a heading/spacer row, or a row past the
     /// last item.
-    #[allow(dead_code)] // consumers land in tasks 3.4-3.6
     pub fn resolve_ordinal_at_y(&self, list_area: Rect, y: u16) -> Option<usize> {
         if y < list_area.y || y >= list_area.y.saturating_add(list_area.height) {
             return None;

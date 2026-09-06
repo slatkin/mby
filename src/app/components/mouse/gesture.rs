@@ -51,14 +51,12 @@ pub enum MouseGesture {
 }
 
 /// Per-parent gesture recognition state. One per mounted parent.
-#[allow(dead_code)] // consumers land in tasks 3.4-3.6
 #[derive(Debug, Default)]
 pub struct MouseGestureState {
     last_click: Option<(Instant, Position)>,
     last_scroll: Option<Instant>,
 }
 
-#[allow(dead_code)] // consumers land in tasks 3.4-3.6
 impl MouseGestureState {
     pub fn new() -> Self {
         Self::default()

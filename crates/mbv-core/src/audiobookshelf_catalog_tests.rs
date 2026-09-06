@@ -242,14 +242,8 @@ fn author_display_prefers_authors_list_and_trims_single_author() {
         book_author_display(
             None,
             Some(&[
-                AuthorWire {
-                    id: None,
-                    name: "a".into()
-                },
-                AuthorWire {
-                    id: None,
-                    name: "b".into()
-                }
+                AuthorWire { name: "a".into() },
+                AuthorWire { name: "b".into() }
             ])
         ),
         Some("a, b".into())

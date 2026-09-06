@@ -13,7 +13,7 @@ pub(super) mod backdrop;
 pub(in crate::app) mod card;
 pub(in crate::app) mod chrome;
 pub(super) mod chrome_player;
-pub(in crate::app) mod chrome_player_legacy;
+pub(in crate::app) mod chrome_player_context;
 pub(in crate::app) mod chrome_status;
 pub(in crate::app) mod chrome_tabs;
 pub(super) mod confirm_modal;

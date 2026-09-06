@@ -1,15 +1,18 @@
-//! `migrate-narrow-browse-to-components` task 2.1: characterization +
-//! regression coverage for the narrow Emby browse surfaces.
+//! Regression coverage for the narrow browse surfaces, seeded by
+//! `migrate-narrow-browse-to-components` (archived) and since grown to cover
+//! adjacent feeds/hero work. All tests are live; none are `#[ignore]`d.
 //!
-//! The two characterization tests exercise the saved-position restore seam
-//! (`LibEvent::RestoreLibraryPosition`) and must stay green across the
-//! migration — restore still writes the resting `BrowseLevel` cursor that a
-//! later content projection hands the owning component.
-//!
-//! The three regression markers are `#[ignore]`d (red until the named task)
-//! and assert on the painted `TestBackend` buffer through `Model::draw_frame`
-//! — the full draw path, since the narrow double-paint only exists when both
-//! the legacy painter and the component `view` run.
+//! Groups:
+//! - Saved-position restore seam (`LibEvent::RestoreLibraryPosition`): restore
+//!   still writes the resting `BrowseLevel` cursor a later content projection
+//!   hands the owning component.
+//! - Painted-selection movement under `j`/`k` for TV and grouped music.
+//! - `*_paints_each_browse_row_once`: the double-paint guard — assert on the
+//!   `TestBackend` buffer through the full `Model::draw_frame` path, red only
+//!   if both the legacy painter and the component `view` run for one surface.
+//! - `feed_home_video_group_*`: shared inline/wide hero placement, scroll, and
+//!   frame completeness for the Home feed video group.
+//! - `wide_podcast_*`: wide Audiobookshelf podcast body snapshot/paint.
 
 use super::*;
 use crate::app::components::BrowserComponent;

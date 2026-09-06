@@ -16,13 +16,11 @@ use ratatui::layout::{Position, Rect};
 /// A last-push-wins map from painted rectangles to a caller-chosen `Tag`.
 ///
 /// On overlap, the most recently pushed rectangle wins (it is painted on top).
-#[allow(dead_code)] // consumers land in tasks 3.4-3.6
 #[derive(Debug, Clone, Default)]
 pub struct HitRegions<Tag> {
     regions: Vec<(Rect, Tag)>,
 }
 
-#[allow(dead_code)] // consumers land in tasks 3.4-3.6
 impl<Tag> HitRegions<Tag> {
     pub fn new() -> Self {
         Self {
