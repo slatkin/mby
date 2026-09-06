@@ -196,6 +196,12 @@ behaviour verified at each breakpoint it renders at, since its hit geometry
 differs between them. A surface that exists at only one breakpoint SHALL record
 which.
 
+The Music workspace SHALL support wheel-scroll wherever it has a keyboard
+scroll or paging action: wheel over the wide right rail SHALL page albums
+(the PageUp/PageDown equivalent), wheel over the wide track table SHALL step
+the track selection (the j/k equivalent), and wheel over the narrow album
+list SHALL page albums.
+
 #### Scenario: A surface renders at both breakpoints
 
 - **WHEN** a surface paints pointable regions in both the wide and narrow
@@ -215,6 +221,21 @@ which.
   surface
 - **THEN** the equivalent pointer gesture is added in the same change, or the
   ledger row records why the action has no pointer equivalent
+
+#### Scenario: Wheel over the wide Music right rail
+
+- **WHEN** the user turns the wheel over the wide Music workspace right rail
+- **THEN** the album selection pages in the wheel direction, as PageUp/PageDown does
+
+#### Scenario: Wheel over the wide Music track table
+
+- **WHEN** the user turns the wheel over the wide Music workspace track table
+- **THEN** the track selection steps in the wheel direction, as j/k does
+
+#### Scenario: Wheel over the narrow Music album list
+
+- **WHEN** the user turns the wheel over the narrow Music workspace album list
+- **THEN** the album selection pages in the wheel direction
 
 ### Requirement: Mouse gesture recognition is verifiable without a terminal
 

@@ -316,6 +316,8 @@ impl Model {
                                 state.video_scroll = offset;
                                 self.app.save_default_library_position(lib_idx);
                             }
+                        } else {
+                            self.app.persist_library_scroll(lib_idx, offset);
                         }
                     }
                 }

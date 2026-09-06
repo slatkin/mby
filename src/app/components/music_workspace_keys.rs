@@ -10,7 +10,12 @@ use super::music_workspace::MusicWorkspaceComponent;
 use crate::app::ui_util::move_cursor;
 
 impl MusicWorkspaceComponent {
-    fn move_album_rows(&mut self, rows: i64, columns: usize, wrap: bool) -> Option<usize> {
+    pub(super) fn move_album_rows(
+        &mut self,
+        rows: i64,
+        columns: usize,
+        wrap: bool,
+    ) -> Option<usize> {
         let order = &self.context.album_order;
         if order.is_empty() {
             return None;
@@ -37,7 +42,7 @@ impl MusicWorkspaceComponent {
         self.context.focused && self.track_cursor.is_none()
     }
 
-    fn move_track(&mut self, delta: i64) {
+    pub(super) fn move_track(&mut self, delta: i64) {
         let count = self.context.album_tracks.as_ref().map_or(0, Vec::len);
         if count > 0 {
             self.track_cursor = Some(move_cursor(self.track_cursor.unwrap_or(0), delta, count));

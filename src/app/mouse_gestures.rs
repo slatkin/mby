@@ -57,7 +57,7 @@ impl App {
         if n > 0 {
             let scope = self.viewed_queue_scope();
             let queue = self.displayed_queue_mut();
-            queue.queue_cursor = super::ui_util::move_cursor(queue.queue_cursor, delta * 3, n);
+            queue.queue_cursor = super::ui_util::move_cursor(queue.queue_cursor, delta, n);
             // The user's own wheel input: the mounted QueueComponent must adopt
             // this index rather than reconciling by slot identity.
             self.playhead.pending_push = Some(QueueCursorPush::Reanchor(scope));

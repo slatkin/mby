@@ -474,7 +474,10 @@ impl HomeComponent {
                 if !self.list_area.contains(at) {
                     return None;
                 }
-                Some(Msg::Shell(ShellRequest::HomeScroll { delta }))
+                // Match Up/Down: Home owns its local cursor and needs no
+                // shell round-trip for a presentation-only wheel step.
+                self.move_local_cursor(delta);
+                None
             }
             MouseGesture::Click(at) => {
                 if let Some(&section_idx) = self.pill_regions.resolve(at) {

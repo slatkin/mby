@@ -186,11 +186,10 @@ pub(super) fn apply_router_outcome(
 /// `tuirealm` forwards `Event::Mouse` to the focused component *and* to every
 /// subscriber, so a mouse tick can yield several `Msg`s. `sync_mouse_subscriptions`
 /// keeps only components painted this frame mouse-eligible, and those paint
-/// disjoint rectangles and each emits only for points inside its own geometry,
-/// so at most one should claim any event. This fold applies the first claim in
-/// `tick()` order and `debug_assert!`s that no more than one was produced — two
-/// claims for one event is a geometry defect, not a ranking problem, so the fold
-/// deliberately has no `Msg`-variant → surface table.
+/// disjoint rectangles and each emits only for points inside its own geometry.
+/// Queue wheel messages are the one intentional exception: crossterm can
+/// deliver a same-tick burst, so their deltas are summed and clamped to one
+/// row. Other multiple claims remain a geometry defect.
 ///
 /// Keyboard ticks carry a `TerminalObserverEvent::Key` marker (the permanent
 /// `UiRoot` observer emits it for every `Event::Keyboard`); those pass through
@@ -214,22 +213,35 @@ pub(super) fn fold_mouse_messages(messages: Vec<Msg>) -> Vec<Msg> {
     let claims = messages
         .iter()
         .filter(|msg| !matches!(msg, Msg::TerminalEvent(_)))
+        .filter(|msg| !matches!(msg, Msg::Shell(ShellRequest::QueueScroll { .. })))
         .count();
     debug_assert!(
         claims <= 1,
         "mouse fold: {claims} components claimed one mouse event; eligible \
          surfaces paint disjoint regions (ADR 0024)"
     );
+    let queue_delta = messages.iter().filter_map(|msg| match msg {
+        Msg::Shell(ShellRequest::QueueScroll { delta }) => Some(*delta),
+        _ => None,
+    });
+    let queue_delta = queue_delta.sum::<i64>().clamp(-1, 1);
     let mut kept_claim = false;
+    let mut emitted_queue_scroll = false;
     messages
         .into_iter()
-        .filter(|msg| {
-            if matches!(msg, Msg::TerminalEvent(_)) {
-                return true;
+        .filter_map(|msg| match msg {
+            Msg::TerminalEvent(_) => Some(msg),
+            Msg::Shell(ShellRequest::QueueScroll { .. }) if emitted_queue_scroll => None,
+            Msg::Shell(ShellRequest::QueueScroll { .. }) => {
+                emitted_queue_scroll = true;
+                (queue_delta != 0)
+                    .then_some(Msg::Shell(ShellRequest::QueueScroll { delta: queue_delta }))
             }
-            let first = !kept_claim;
-            kept_claim = true;
-            first
+            _ => {
+                let first = !kept_claim;
+                kept_claim = true;
+                first.then_some(msg)
+            }
         })
         .collect()
 }
@@ -485,6 +497,23 @@ mod mouse_fold_tests {
         assert_eq!(
             fold_mouse_messages(vec![leaf.clone(), key.clone()]),
             vec![leaf, key]
+        );
+    }
+
+    #[test]
+    fn fold_collapses_a_queue_wheel_burst_to_one_row() {
+        let folded = fold_mouse_messages(vec![
+            Msg::Shell(ShellRequest::QueueScroll { delta: 1 }),
+            Msg::Shell(ShellRequest::QueueScroll { delta: 1 }),
+            Msg::Shell(ShellRequest::QueueScroll { delta: -1 }),
+            Msg::TerminalEvent(TerminalObserverEvent::NoOp),
+        ]);
+        assert_eq!(
+            folded,
+            vec![
+                Msg::Shell(ShellRequest::QueueScroll { delta: 1 }),
+                Msg::TerminalEvent(TerminalObserverEvent::NoOp),
+            ]
         );
     }
 

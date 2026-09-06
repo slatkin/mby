@@ -35,6 +35,47 @@ fn queue() -> Vec<mbv_core::playback_queue::QueueSlot> {
 }
 
 #[test]
+fn queue_mouse_wheel_steps_one_row_and_throttles_bursts() {
+    let mut component = QueueComponent::new();
+    component.set_content(
+        queue(),
+        QueueCursorUpdate::Set(0),
+        QueueScope::Local,
+        PlaybackState::default(),
+        QueueTitleModel::default(),
+    );
+    component.set_area(ratatui::layout::Rect::new(0, 0, 20, 5));
+
+    assert_eq!(
+        component.on(&Event::Mouse(MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column: 2,
+            row: 2,
+            modifiers: KeyModifiers::NONE,
+        })),
+        Some(Msg::Shell(ShellRequest::QueueScroll { delta: 1 }))
+    );
+    assert_eq!(
+        component.on(&Event::Mouse(MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column: 2,
+            row: 2,
+            modifiers: KeyModifiers::NONE,
+        })),
+        None
+    );
+    assert_eq!(
+        component.on(&Event::Mouse(MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column: 30,
+            row: 2,
+            modifiers: KeyModifiers::NONE,
+        })),
+        None
+    );
+}
+
+#[test]
 fn queue_activation_uses_slot_id_after_snapshot_reorder() {
     let slots = queue();
     let second = slots[1].slot_id;

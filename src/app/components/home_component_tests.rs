@@ -63,6 +63,43 @@ fn two_section_home() -> HomeComponent {
     home
 }
 
+#[test]
+fn home_wheel_steps_one_row_and_ignores_pills() {
+    let mut home = two_section_home();
+    let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+    terminal
+        .draw(|frame| home.view(frame, frame.area()))
+        .unwrap();
+    let list = home.menu_placement_geometry().0;
+    let event = |kind| {
+        Event::Mouse(MouseEvent {
+            kind,
+            column: list.x + 1,
+            row: list.y + 1,
+            modifiers: KeyModifiers::NONE,
+        })
+    };
+
+    assert_eq!(home.cursor(), 0);
+    assert_eq!(home.on(&event(MouseEventKind::ScrollDown)), None);
+    assert_eq!(home.cursor(), 1);
+    home.reset_mouse_gestures_for_test();
+    assert_eq!(home.on(&event(MouseEventKind::ScrollUp)), None);
+    assert_eq!(home.cursor(), 0);
+
+    home.reset_mouse_gestures_for_test();
+    assert_eq!(
+        home.on(&Event::Mouse(MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column: 0,
+            row: 0,
+            modifiers: KeyModifiers::NONE,
+        })),
+        None
+    );
+    assert_eq!(home.cursor(), 0, "wheel over pills/chrome must be ignored");
+}
+
 fn key(code: Key) -> Event<crate::app::components::UserEvent> {
     Event::Keyboard(KeyEvent {
         code,

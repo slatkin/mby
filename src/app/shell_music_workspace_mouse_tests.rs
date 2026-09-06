@@ -299,6 +299,226 @@ fn wide_music_album_rail_click_still_requests_cursor_move() {
 }
 
 #[test]
+fn wide_music_rail_wheel_pages_albums() {
+    let mut model = Model::new(make_music_group_app());
+    for index in 2..=32 {
+        let mut album = make_item(&format!("Album {index}"), "MusicAlbum");
+        album.id = format!("album-{index}");
+        album.artist = "Alpha".into();
+        model.app.libs[0].nav_stack[1].items.push(album);
+    }
+    model.app.layout.main.left_area = ratatui::layout::Rect::new(0, 0, 100, 30);
+    model.app.layout.main.wide_music_area = ratatui::layout::Rect::new(0, 0, 100, 30);
+    model.app.layout.main.wide_music_right_area = ratatui::layout::Rect::new(50, 0, 50, 30);
+    model.sync_music_workspace();
+    model.sync_active_destination();
+    let id = model.music_workspace_id.clone().unwrap();
+    let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+    terminal
+        .draw(|frame| model.render_music_workspace_component(frame))
+        .unwrap();
+    let (column, row) = {
+        let component = model
+            .application
+            .get_component(&id)
+            .unwrap()
+            .as_any()
+            .downcast_ref::<MusicWorkspaceComponent>()
+            .unwrap();
+        let area = component.layout().wide_music_browser_area;
+        (area.x + 1, area.y + 1)
+    };
+    let wheel = |kind| {
+        Event::Mouse(MouseEvent {
+            kind,
+            column,
+            row,
+            modifiers: KeyModifiers::NONE,
+        })
+    };
+    let down = model
+        .application
+        .get_component_mut(&id)
+        .unwrap()
+        .on(&wheel(MouseEventKind::ScrollDown));
+    let Some(Msg::Shell(ShellRequest::MusicAlbumCursor { target, kind })) = down else {
+        panic!("expected MusicAlbumCursor, got {down:?}");
+    };
+    assert_eq!(kind, AlbumCursorKind::Page);
+    assert_eq!(target, 30);
+    model
+        .application
+        .get_component_mut(&id)
+        .unwrap()
+        .as_any_mut()
+        .downcast_mut::<MusicWorkspaceComponent>()
+        .unwrap()
+        .reset_mouse_gestures_for_test();
+    let up = model
+        .application
+        .get_component_mut(&id)
+        .unwrap()
+        .on(&wheel(MouseEventKind::ScrollUp));
+    assert!(matches!(
+        up,
+        Some(Msg::Shell(ShellRequest::MusicAlbumCursor {
+            target: 0,
+            kind: AlbumCursorKind::Page,
+        }))
+    ));
+}
+
+#[test]
+fn wide_music_track_wheel_steps_track() {
+    let mut model = Model::new(make_music_group_app());
+    let mut first = make_item("Track One", "Audio");
+    first.id = "track-1".into();
+    let mut second = make_item("Track Two", "Audio");
+    second.id = "track-2".into();
+    model
+        .app
+        .album_tracks_cache
+        .insert("album-1".into(), vec![first, second]);
+    model.app.layout.main.wide_music_area = ratatui::layout::Rect::new(0, 0, 100, 30);
+    model.app.layout.main.wide_music_right_area = ratatui::layout::Rect::new(50, 0, 50, 30);
+    model.sync_music_workspace();
+    model.sync_active_destination();
+    let id = model.music_workspace_id.clone().unwrap();
+    let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+    terminal
+        .draw(|frame| model.render_music_workspace_component(frame))
+        .unwrap();
+    let (column, row) = {
+        let component = model
+            .application
+            .get_component_mut(&id)
+            .unwrap()
+            .as_any_mut()
+            .downcast_mut::<MusicWorkspaceComponent>()
+            .unwrap();
+        component.set_inline_track_focus_enabled(true);
+        component.enter_track_focus();
+        let (rect, _) = component.layout().wide_music_track_hitmap[0];
+        (rect.x + 1, rect.y)
+    };
+    let message = model
+        .application
+        .get_component_mut(&id)
+        .unwrap()
+        .on(&Event::Mouse(MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column,
+            row,
+            modifiers: KeyModifiers::NONE,
+        }));
+    assert_eq!(message, None);
+    let component = model
+        .application
+        .get_component(&id)
+        .unwrap()
+        .as_any()
+        .downcast_ref::<MusicWorkspaceComponent>()
+        .unwrap();
+    assert_eq!(component.track_cursor(), Some(1));
+}
+
+#[test]
+fn narrow_music_list_wheel_pages_albums() {
+    let mut model = Model::new(make_music_group_app());
+    for index in 2..=12 {
+        let mut album = make_item(&format!("Album {index}"), "MusicAlbum");
+        album.id = format!("album-{index}");
+        album.artist = "Alpha".into();
+        model.app.libs[0].nav_stack[1].items.push(album);
+    }
+    model.app.layout.main.left_area = ratatui::layout::Rect::new(0, 0, 60, 9);
+    model.app.layout.main.wide_music_area = ratatui::layout::Rect::default();
+    model.sync_music_workspace();
+    model.sync_active_destination();
+    let id = model.music_workspace_id.clone().unwrap();
+    let mut terminal = Terminal::new(TestBackend::new(60, 9)).unwrap();
+    terminal
+        .draw(|frame| model.render_music_workspace_component(frame))
+        .unwrap();
+    let (column, row) = {
+        let component = model
+            .application
+            .get_component(&id)
+            .unwrap()
+            .as_any()
+            .downcast_ref::<MusicWorkspaceComponent>()
+            .unwrap();
+        let area = component.test_narrow_list_area();
+        (area.x + 1, area.y + 2)
+    };
+    let message = model
+        .application
+        .get_component_mut(&id)
+        .unwrap()
+        .on(&Event::Mouse(MouseEvent {
+            kind: MouseEventKind::ScrollDown,
+            column,
+            row,
+            modifiers: KeyModifiers::NONE,
+        }));
+    assert!(matches!(
+        message,
+        Some(Msg::Shell(ShellRequest::MusicAlbumCursor {
+            target: 9,
+            kind: AlbumCursorKind::Page,
+        }))
+    ));
+}
+
+#[test]
+fn music_wheel_over_chrome_is_ignored() {
+    for (wide, width, height) in [(true, 100, 30), (false, 60, 9)] {
+        let mut model = Model::new(make_music_group_app());
+        if wide {
+            model.app.layout.main.wide_music_area = ratatui::layout::Rect::new(0, 0, width, height);
+            model.app.layout.main.wide_music_right_area =
+                ratatui::layout::Rect::new(50, 0, 50, height);
+        } else {
+            model.app.layout.main.left_area = ratatui::layout::Rect::new(0, 0, width, height);
+            model.app.layout.main.wide_music_area = ratatui::layout::Rect::default();
+        }
+        model.sync_music_workspace();
+        model.sync_active_destination();
+        let id = model.music_workspace_id.clone().unwrap();
+        let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+        terminal
+            .draw(|frame| model.render_music_workspace_component(frame))
+            .unwrap();
+        let (column, row) = {
+            let component = model
+                .application
+                .get_component(&id)
+                .unwrap()
+                .as_any()
+                .downcast_ref::<MusicWorkspaceComponent>()
+                .unwrap();
+            let (rect, _) = component
+                .test_pill_regions()
+                .first()
+                .copied()
+                .expect("painted group pill");
+            (rect.x + 1, rect.y)
+        };
+        let message = model
+            .application
+            .get_component_mut(&id)
+            .unwrap()
+            .on(&Event::Mouse(MouseEvent {
+                kind: MouseEventKind::ScrollDown,
+                column,
+                row,
+                modifiers: KeyModifiers::NONE,
+            }));
+        assert_eq!(message, None);
+    }
+}
+
+#[test]
 fn music_mouse_track_click_stays_component_local() {
     let mut model = Model::new(make_music_group_app());
     let mut track = make_item("Track One", "Audio");

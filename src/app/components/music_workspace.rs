@@ -402,6 +402,28 @@ impl MusicWorkspaceComponent {
         }
         let wide = self.last_wide.unwrap_or(false);
         match self.mouse_gestures.recognize(mouse)? {
+            MouseGesture::Scroll { at, delta } => {
+                if wide {
+                    if self.layout.wide_music_track_at(at).is_some() {
+                        if self.track_cursor.is_some() {
+                            self.move_track(delta);
+                        }
+                        return None;
+                    }
+                    if !self.layout.wide_music_browser_area.contains(at) {
+                        return None;
+                    }
+                } else if !self.narrow_list_area.contains(at) {
+                    return None;
+                }
+                let target = self
+                    .move_album_rows(delta * self.page_rows as i64, self.album_columns, false)
+                    .unwrap_or(self.album_cursor);
+                Some(Msg::Shell(ShellRequest::MusicAlbumCursor {
+                    target,
+                    kind: AlbumCursorKind::Page,
+                }))
+            }
             // Wide right-rail / track table: unchanged from task 3.6.
             MouseGesture::Click(at) | MouseGesture::DoubleClick(at) if wide => {
                 if let Some(track) = self.layout.wide_music_track_at(at) {
@@ -507,6 +529,11 @@ impl MusicWorkspaceComponent {
     #[cfg(test)]
     pub(in crate::app) fn test_pill_regions(&self) -> &[(Rect, usize)] {
         self.pill_regions.regions()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reset_mouse_gestures_for_test(&mut self) {
+        self.mouse_gestures.reset_for_test();
     }
 }
 

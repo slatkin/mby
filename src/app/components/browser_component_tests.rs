@@ -118,6 +118,36 @@ fn expected_movement_request(_key: Key, index: usize) -> ShellRequest {
     ShellRequest::BrowserCursorIndex { index }
 }
 
+#[test]
+fn browser_wheel_steps_one_painted_row_and_ignores_chrome() {
+    let mut browser = BrowserComponent::new();
+    browser.set_content(BrowserContent::from_items(make_items(8)));
+    browser.set_focused(true);
+    let mut terminal = Terminal::new(TestBackend::new(80, 12)).unwrap();
+    terminal
+        .draw(|frame| browser.view(frame, frame.area()))
+        .unwrap();
+    let list = browser.test_layout().left_area;
+    let wheel = |kind| {
+        Event::Mouse(MouseEvent {
+            kind,
+            column: list.x + 1,
+            row: list.y + 1,
+            modifiers: KeyModifiers::NONE,
+        })
+    };
+
+    assert_eq!(
+        browser.on(&wheel(MouseEventKind::ScrollDown)),
+        Some(Msg::Shell(ShellRequest::BrowserCursorIndex { index: 1 }))
+    );
+    browser.reset_mouse_gestures_for_test();
+    assert_eq!(
+        browser.on(&wheel(MouseEventKind::ScrollUp)),
+        Some(Msg::Shell(ShellRequest::BrowserCursorIndex { index: 0 }))
+    );
+}
+
 /// Letter-grouped lists (60 items render bucketed rows with a header row
 /// between buckets and a ragged trailing row per bucket) striding one
 /// PAINTED item row per Up/Down, using the component's `letter_vertical_delta`:

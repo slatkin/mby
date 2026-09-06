@@ -444,19 +444,28 @@ impl BrowserComponent {
         }
         match self.mouse_gestures.recognize(mouse)? {
             MouseGesture::Scroll { at, delta } => {
-                if !self.layout.left_area.contains(at) {
-                    return None;
+                // Feed/home-video group lists retain their independent
+                // viewport offset; the shell persists that offset.
+                if self.context.has_group_pills() {
+                    if !self.layout.left_area.contains(at) {
+                        return None;
+                    }
+                    let rows = self.layout.left_item_rows.len();
+                    let viewport = self.layout.left_area.height as usize;
+                    let max_offset = rows.saturating_sub(viewport);
+                    self.scroll = self
+                        .scroll
+                        .saturating_add_signed(delta as isize)
+                        .min(max_offset);
+                    return Some(Msg::Shell(ShellRequest::BrowserScroll {
+                        offset: self.scroll,
+                    }));
                 }
-                let rows = self.layout.left_item_rows.len();
-                let viewport = self.layout.left_area.height as usize;
-                let max_offset = rows.saturating_sub(viewport);
-                self.scroll = self
-                    .scroll
-                    .saturating_add_signed(delta as isize)
-                    .min(max_offset);
-                Some(Msg::Shell(ShellRequest::BrowserScroll {
-                    offset: self.scroll,
-                }))
+                // Match the keyboard path: the component owns the live cursor,
+                // while the shell receives the resolved target index.
+                self.resolve_row_target(at)?;
+                let index = self.move_by_item_rows(delta);
+                Some(Msg::Shell(ShellRequest::BrowserCursorIndex { index }))
             }
             MouseGesture::Click(at) => {
                 if let Some(&pill) = self.pill_regions.resolve(at) {
