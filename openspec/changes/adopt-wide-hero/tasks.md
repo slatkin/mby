@@ -6,8 +6,8 @@
 
 ## 2. Mirror the shared arrangement
 
-- [ ] 2.1 Change the shared Wide hero pane calculation to place the existing larger browser pane on the left and the existing approximately 40% hero pane on the right while preserving the gap, minimum widths, breakpoint, minimum-height guard, padding, and status-row reserve; verify `cargo check -p mbv` succeeds.
-- [ ] 2.2 Update the shared browser-pane pills/list framing and hero-pane fill/content-box primitives to consume role-named geometry without destination-owned splitting; verify `ast-grep scan` reports no frontend-boundary violation.
+- [x] 2.1 Change the shared Wide hero pane calculation to place the existing larger browser pane on the left and the existing approximately 40% hero pane on the right while preserving the gap, minimum widths, breakpoint, minimum-height guard, padding, and status-row reserve; verify `cargo check -p mbv` succeeds.
+- [x] 2.2 Update the shared browser-pane pills/list framing and hero-pane fill/content-box primitives to consume role-named geometry without destination-owned splitting; verify `ast-grep scan` reports no frontend-boundary violation.
 
 ## 3. Adopt mirrored geometry everywhere
 
