@@ -452,3 +452,48 @@ fn blocking_overlay_focus_loss_and_restoration_through_live_tick() {
     )));
 }
 
+
+/// Finding 1: `.` is a selection-dependent chord, so the central router falls
+/// it through to the focused `QueueComponent`; the emitted `QueueContextMenu`
+/// request is dispatched by the shell into a pending context-menu overlay.
+#[test]
+fn tick_routes_dot_to_focused_queue_and_opens_the_context_menu() {
+    let mut app = make_app_stub();
+    app.panel_focus = PanelFocus::Queue;
+    app.player_tab.set_queue_items(
+        vec![mbv_core::playback_queue::QueueItem::Emby(Box::new(
+            crate::app::tests::make_item("queued", "Movie"),
+        ))],
+        0,
+    );
+    let mut harness = TickHarness::new(app);
+    harness.model_mut().sync_mounted_surfaces();
+    assert_eq!(harness.model().application.focus(), Some(&ComponentId::Queue));
+
+    harness.inject(key(Key::Char('.')));
+    let outcome = harness.step();
+
+    assert_eq!(outcome.pre_fold_focus, Some(ComponentId::Queue));
+    assert!(matches!(outcome.router, RouterOutcome::FallThrough));
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|m| matches!(m, Msg::Shell(ShellRequest::QueueContextMenu { .. }))),
+        "`.` falls through to the focused Queue component"
+    );
+
+    let (mut music_resize, mut tv_resize) = (false, false);
+    for message in outcome.messages {
+        harness
+            .model_mut()
+            .handle_terminal_message(message, &mut music_resize, &mut tv_resize);
+    }
+    assert!(
+        matches!(
+            harness.model().app.pending_overlay,
+            Some(OverlayRequest::ContextMenu(_))
+        ),
+        "dispatching QueueContextMenu opens a context-menu overlay"
+    );
+}

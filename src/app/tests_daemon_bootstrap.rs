@@ -42,7 +42,7 @@ fn remote_app_starts_on_local_queue_when_remote_queue_is_empty() {
     let app = make_remote_app_stub(make_items(2), Vec::new());
 
     assert_eq!(app.queue_scope, QueueScope::Local);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn remote_app_starts_on_remote_queue_when_remote_queue_has_items() {
     let app = make_remote_app_stub(make_items(2), make_items(1));
 
     assert_eq!(app.queue_scope, QueueScope::Remote);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Remote);
 }
 
 #[test]

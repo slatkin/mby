@@ -3,7 +3,7 @@ use super::components::{
     QueueRequest,
 };
 use super::shell::Model;
-use super::{PanelFocus, QueueScope};
+use super::{PanelFocus, QueueCursorPush, QueueScope};
 use crate::app::notify_actions::ToastSeverity;
 
 impl Model {
@@ -31,18 +31,26 @@ impl Model {
             }
         }
 
-        let scope = self.app.visible_queue_scope();
+        let scope = self.app.viewed_queue_scope();
         let slots = self.app.queue_for_scope(scope).slots().to_vec();
-        // An authoritative writer (follow-the-playhead, jump-to-now-playing,
-        // wheel scroll, scope switch) armed `queue_cursor_pushed`; consume it
-        // as a `Set` that wins over slot-identity reconciliation. Otherwise
-        // this is a routine content refresh: `Preserve` the component's own
-        // selection pinned to its slot.
-        let cursor = if self.app.queue_cursor_pushed {
-            self.app.queue_cursor_pushed = false;
-            QueueCursorUpdate::Set(self.app.queue_for_scope(scope).queue_cursor)
-        } else {
-            QueueCursorUpdate::Preserve
+        // An authoritative writer armed `playhead.pending_push` for a specific
+        // scope. Consume it as a `Set` that wins over slot-identity
+        // reconciliation only when that scope is the one on screen: a push
+        // armed for a scope the user is not viewing (e.g. a remote daemon
+        // update while the user browses Local) must not snap the visible
+        // scope's independent selection. A `Follow` push additionally yields
+        // to an in-progress user navigation; a `Reanchor` (scope switch, full
+        // replacement, wheel scroll, jump-to-now-playing) always wins.
+        // Anything else is a routine content refresh: `Preserve` the
+        // component's own selection pinned to its slot.
+        let cursor = match self.app.playhead.pending_push.take() {
+            Some(push) if push.scope() == scope => match push {
+                QueueCursorPush::Follow(_) if self.app.queue_cursor_held_by_user() => {
+                    QueueCursorUpdate::Preserve
+                }
+                _ => QueueCursorUpdate::Set(self.app.queue_for_scope(scope).queue_cursor),
+            },
+            _ => QueueCursorUpdate::Preserve,
         };
         let playback = self.app.displayed_queue_playback_state();
         let title = self.app.queue_title_model();
@@ -113,6 +121,16 @@ impl Model {
                 }
             }
             QueueRequest::Undo { scope } => {
+                // The component can still be showing (and emit for) `Remote`
+                // for a frame after a remote disconnect, before the projection
+                // refresh flips it back. Once no direct remote queue exists the
+                // visible queue is the Local one, so treat the undo as
+                // targeting Local rather than flashing a spurious error.
+                let scope = if scope == QueueScope::Remote && !self.app.has_direct_remote_queue() {
+                    QueueScope::Local
+                } else {
+                    scope
+                };
                 if scope == QueueScope::Remote {
                     self.app.flash(
                         "Undo is not supported for remote queue edits".into(),
@@ -151,10 +169,12 @@ impl Model {
                 };
                 if active {
                     self.app.playback_queue_mut().queue_cursor = current_idx;
-                    self.app.queue_cursor_pushed = true;
                     if self.app.player.is_remote() {
                         self.app.set_queue_scope(QueueScope::Remote);
                     }
+                    // Jump-to-now-playing is an explicit, authoritative move.
+                    self.app.playhead.pending_push =
+                        Some(QueueCursorPush::Reanchor(self.app.playing_queue_scope()));
                 } else {
                     self.app
                         .flash("Nothing is playing".into(), ToastSeverity::Error);
@@ -228,7 +248,7 @@ impl Model {
 mod tests {
     use super::*;
     use crate::app::components::{Msg, QueueRequest};
-    use crate::app::tests::{make_app_stub, make_item};
+    use crate::app::tests::{make_app_stub, make_item, make_remote_app_stub};
     use tuirealm::event::{Event, Key, KeyEvent, KeyModifiers};
 
     #[test]
@@ -285,6 +305,191 @@ mod tests {
         assert_eq!(
             model.app.player_tab.queue_cursor, 0,
             "QueueRequest::Cursor must not write App's follow cursor"
+        );
+    }
+
+    fn emby_items(n: usize) -> Vec<mbv_core::playback_queue::QueueItem> {
+        (0..n)
+            .map(|i| {
+                mbv_core::playback_queue::QueueItem::Emby(Box::new(make_item(
+                    &format!("row-{i}"),
+                    "Movie",
+                )))
+            })
+            .collect()
+    }
+
+    fn queue_cursor(model: &Model) -> usize {
+        model
+            .application
+            .get_component(&ComponentId::Queue)
+            .and_then(|c| c.as_any().downcast_ref::<QueueComponent>())
+            .map(QueueComponent::test_cursor)
+            .expect("Queue component mounted")
+    }
+
+    fn press_down(model: &mut Model) {
+        model
+            .application
+            .get_component_mut(&ComponentId::Queue)
+            .expect("Queue component mounted")
+            .on(&Event::Keyboard(KeyEvent {
+                code: Key::Down,
+                modifiers: KeyModifiers::NONE,
+            }));
+    }
+
+    #[test]
+    fn stale_follow_push_yields_to_a_user_navigation_after_it_was_armed() {
+        // Finding 2: a follow push must not snap the selection back onto the
+        // playhead slot once the user has arrowed away in the meantime.
+        // The playhead cursor (App `queue_cursor`) stays at row 0 while the
+        // component sits on row 1, so a consumed `Set` would visibly move the
+        // component and this assertion fails if the hold-window guard is
+        // dropped from `sync_queue`.
+        let mut app = make_app_stub();
+        app.player_tab.set_queue_items(emby_items(3), 0);
+        app.panel_focus = PanelFocus::Queue;
+        let mut model = Model::new(app);
+        model.sync_queue();
+
+        // User arrows down to row 1 and the shell records the navigation
+        // (arming the hold window via `select_queue_slot`).
+        let msg = model
+            .application
+            .get_component_mut(&ComponentId::Queue)
+            .unwrap()
+            .on(&Event::Keyboard(KeyEvent {
+                code: Key::Down,
+                modifiers: KeyModifiers::NONE,
+            }));
+        let Some(Msg::Queue(request)) = msg else {
+            panic!("Down must emit a Cursor request");
+        };
+        model.handle_queue_request(request);
+        assert_eq!(
+            queue_cursor(&model),
+            1,
+            "component moved under user control"
+        );
+        assert_eq!(
+            model.app.player_tab.queue_cursor, 0,
+            "the playhead cursor is still the stale row 0"
+        );
+
+        // A follow push for the visible scope arms *after* the navigation.
+        model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Local));
+        model.sync_queue();
+
+        assert_eq!(
+            queue_cursor(&model),
+            1,
+            "user navigation wins; the follow push must not re-snap to row 0"
+        );
+        assert!(
+            model.app.playhead.pending_push.is_none(),
+            "the stale push is cleared"
+        );
+    }
+
+    #[test]
+    fn cursor_push_is_scope_aware() {
+        // Finding 3: a push armed for Remote scope (e.g. a remote daemon queue
+        // update) must not force the component while the user views Local.
+        let mut app = make_remote_app_stub(
+            crate::app::tests::make_items(3),
+            crate::app::tests::make_items(3),
+        );
+        app.queue_scope = QueueScope::Local;
+        app.panel_focus = PanelFocus::Queue;
+        let mut model = Model::new(app);
+        model.sync_queue();
+        assert_eq!(model.app.viewed_queue_scope(), QueueScope::Local);
+
+        model.app.player_tab.queue_cursor = 2;
+        model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Remote));
+        model.sync_queue();
+        assert_eq!(
+            queue_cursor(&model),
+            0,
+            "a Remote-scoped push must not move the Local view"
+        );
+        assert!(
+            model.app.playhead.pending_push.is_none(),
+            "stale push cleared"
+        );
+
+        // A push armed for the visible scope still applies.
+        model.app.playhead.pending_push = Some(QueueCursorPush::Follow(QueueScope::Local));
+        model.sync_queue();
+        assert_eq!(queue_cursor(&model), 2, "matching-scope push applies");
+    }
+
+    #[test]
+    fn full_replacement_reanchors_instead_of_preserving() {
+        // Finding 4: a full queue replacement regenerates slot ids, so a
+        // preserved selection could collide with an unrelated new slot. The
+        // replacement must arm a Set push to the new start index.
+        let mut app = make_app_stub();
+        app.player_tab.set_queue_items(emby_items(3), 0);
+        app.panel_focus = PanelFocus::Queue;
+        let mut model = Model::new(app);
+        model.sync_queue();
+
+        press_down(&mut model);
+        press_down(&mut model);
+        assert_eq!(queue_cursor(&model), 2);
+
+        model
+            .app
+            .replace_playback_queue(crate::app::tests::make_items(4), 1);
+        assert_eq!(
+            model.app.playhead.pending_push,
+            Some(QueueCursorPush::Reanchor(QueueScope::Local)),
+            "a replacement arms a Reanchor push"
+        );
+
+        model.sync_queue();
+        assert_eq!(
+            queue_cursor(&model),
+            1,
+            "component re-anchors to the replacement's start index"
+        );
+    }
+
+    #[test]
+    fn remote_undo_falls_back_to_local_when_no_direct_remote_queue() {
+        // Finding 5: after a remote disconnect the still-mounted component can
+        // emit Undo { scope: Remote } for a frame. With no direct remote queue
+        // the visible queue is Local, so undo the Local edit instead of
+        // flashing an error.
+        use crate::app::types_playback::UndoEntry;
+        let mut app = make_app_stub();
+        app.player_tab.set_queue_items(emby_items(2), 0);
+        app.queue_undo_stack.push(UndoEntry::Remove(
+            0,
+            mbv_core::playback_queue::QueueItem::Emby(Box::new(make_item("restored", "Movie"))),
+        ));
+        let mut model = Model::new(app);
+        assert!(!model.app.has_direct_remote_queue());
+
+        model.handle_queue_request(QueueRequest::Undo {
+            scope: QueueScope::Remote,
+        });
+
+        assert_ne!(
+            model.app.status_severity,
+            ToastSeverity::Error,
+            "no spurious remote-undo-unsupported error"
+        );
+        assert!(
+            model.app.queue_undo_stack.is_empty(),
+            "the Local undo entry was consumed"
+        );
+        assert_eq!(
+            model.app.player_tab.total_queue_len(),
+            3,
+            "the removed item was restored to the Local queue"
         );
     }
 }

@@ -1,3 +1,4 @@
+use super::types_playback::PlayheadProjection;
 use super::types_settings::SettingsDestination;
 use super::*;
 
@@ -215,7 +216,7 @@ pub(crate) fn make_app_stub() -> App {
         remote_queue_undo_stack: Vec::new(),
         pending_remote_move_cursor: None,
         pending_queue_edit_cursor: None,
-        pending_active_idx: None,
+        playhead: PlayheadProjection::new(),
         next_up_item: None,
         panel_focus: PanelFocus::default(),
         tab: TabSelection::Home,
@@ -313,7 +314,6 @@ pub(crate) fn make_app_stub() -> App {
         library_route_cache: std::collections::HashMap::new(),
         last_nav_at: Instant::now() - Duration::from_secs(1),
         last_library_nav_at: Instant::now() - Duration::from_secs(1),
-        queue_cursor_pushed: false,
         library_position_dirty: false,
         library_position_dirty_at: Instant::now() - Duration::from_secs(1),
         // Default to "focused, past grace window" so existing mouse

@@ -214,6 +214,53 @@ fn queue_right_click_uses_the_rendered_slot_target() {
     );
 }
 
+#[test]
+fn queue_dot_opens_the_context_menu_for_the_selected_row() {
+    let slots = queue();
+    let first = slots[0].slot_id;
+    let mut component = QueueComponent::new();
+    component.set_content(
+        slots,
+        QueueCursorUpdate::Set(0),
+        QueueScope::Local,
+        PlaybackState::default(),
+        QueueTitleModel::default(),
+    );
+    component.set_focused(true);
+    assert!(matches!(
+        component.on(&Event::Keyboard(key(Key::Char('.')))),
+        Some(Msg::Shell(ShellRequest::QueueContextMenu { slot_id: Some(slot_id) })) if slot_id == first
+    ));
+}
+
+#[test]
+fn queue_right_click_on_blank_space_opens_no_menu() {
+    let mut component = QueueComponent::new();
+    component.set_content(
+        queue(),
+        QueueCursorUpdate::Set(0),
+        QueueScope::Local,
+        PlaybackState::default(),
+        QueueTitleModel::default(),
+    );
+    component.set_focused(true);
+    let mut terminal = Terminal::new(TestBackend::new(40, 8)).unwrap();
+    terminal
+        .draw(|frame| component.view(frame, frame.area()))
+        .unwrap();
+    // Row 6 is below the two rendered slots — blank queue space.
+    let message = component.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Right),
+        column: 1,
+        row: 6,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert!(
+        message.is_none(),
+        "a right-click on blank queue space must not open a menu"
+    );
+}
+
 /// A queue long enough that rendering the bottom cursor produces a nonzero
 /// viewport scroll (30 slots in an 8-row terminal).
 fn long_queue() -> Vec<mbv_core::playback_queue::QueueSlot> {

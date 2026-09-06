@@ -123,7 +123,7 @@ fn resetting_local_daemon_queue_view_drops_stale_remote_queue_and_scope() {
 
     assert!(app.remote_player_tab.is_none());
     assert_eq!(app.queue_scope, QueueScope::Local);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
 }
 
 #[test]
@@ -211,7 +211,7 @@ fn disconnecting_attached_session_preserves_sessions_panel_direct_remote() {
 
 #[test]
 fn displayed_queue_playback_state_stays_active_for_local_daemon_queue() {
-    let mut app = make_local_daemon_app_stub(make_items(3));
+    let app = make_local_daemon_app_stub(make_items(3));
     {
         let mut status = app.player.status.lock().unwrap();
         status.active = true;
@@ -465,7 +465,7 @@ fn displayed_queue_playback_state_is_inactive_for_non_playback_scope() {
         .now_playing_item_id = Some("id1".into());
     app.set_queue_scope(QueueScope::Local);
 
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
     assert_eq!(
         app.displayed_queue_playback_state(),
         PlaybackState::default()

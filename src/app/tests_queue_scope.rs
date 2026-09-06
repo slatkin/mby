@@ -8,10 +8,10 @@ fn stale_remote_queue_scope_falls_back_to_local_when_not_in_direct_remote_mode()
     app.remote_player_tab = Some(PlayerTab::from_emby_items(make_items(2), 1));
     app.queue_scope = QueueScope::Remote;
 
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
 
     app.set_queue_scope(QueueScope::Remote);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
     assert_eq!(app.queue_scope, QueueScope::Local);
 }
 
@@ -21,8 +21,8 @@ fn queue_scope_resolution_matrix_without_remote_queue() {
     app.queue_scope = QueueScope::Local;
 
     assert!(!app.has_direct_remote_queue());
-    assert_eq!(app.playback_target_queue_scope(), QueueScope::Local);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.playing_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
     assert!(app.local_queue_metadata_applies(QueueScope::Local));
     assert!(app.local_queue_metadata_applies(QueueScope::Remote));
 }
@@ -34,8 +34,8 @@ fn queue_scope_resolution_matrix_stale_remote_scope_without_direct_remote() {
     app.queue_scope = QueueScope::Remote;
 
     assert!(!app.has_direct_remote_queue());
-    assert_eq!(app.playback_target_queue_scope(), QueueScope::Local);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.playing_queue_scope(), QueueScope::Local);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
     assert!(app.local_queue_metadata_applies(QueueScope::Local));
     assert!(app.local_queue_metadata_applies(QueueScope::Remote));
 }
@@ -48,8 +48,8 @@ fn queue_scope_resolution_matrix_direct_remote_displaying_local() {
     app.queue_scope = QueueScope::Local;
 
     assert!(app.has_direct_remote_queue());
-    assert_eq!(app.playback_target_queue_scope(), QueueScope::Remote);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Local);
+    assert_eq!(app.playing_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Local);
     assert!(app.local_queue_metadata_applies(QueueScope::Local));
     assert!(!app.local_queue_metadata_applies(QueueScope::Remote));
 }
@@ -62,8 +62,8 @@ fn queue_scope_resolution_matrix_direct_remote_displaying_remote() {
     app.queue_scope = QueueScope::Remote;
 
     assert!(app.has_direct_remote_queue());
-    assert_eq!(app.playback_target_queue_scope(), QueueScope::Remote);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.playing_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Remote);
     assert!(app.local_queue_metadata_applies(QueueScope::Local));
     assert!(!app.local_queue_metadata_applies(QueueScope::Remote));
 }
@@ -113,7 +113,7 @@ fn direct_remote_play_items_keeps_local_queue_intact() {
         app.queue_source,
         crate::config::QueueSource::Album
     ));
-    assert_eq!(app.visible_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Remote);
 }
 
 #[test]

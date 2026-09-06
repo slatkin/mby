@@ -2,7 +2,7 @@
 
 use crate::app::action::Command;
 use crate::app::components::msg::TvHit;
-use crate::app::{App, QueueScope};
+use crate::app::{App, QueueCursorPush, QueueScope};
 use mbv_core::api::TICKS_PER_SECOND;
 use mbv_core::player::PlayerCommand;
 use mbv_core::remote_reconciliation::RemoteIntent;
@@ -55,11 +55,12 @@ impl App {
     pub(super) fn handle_mouse_scroll_queue(&mut self, delta: i64) {
         let n = self.displayed_queue().total_queue_len();
         if n > 0 {
+            let scope = self.viewed_queue_scope();
             let queue = self.displayed_queue_mut();
             queue.queue_cursor = super::ui_util::move_cursor(queue.queue_cursor, delta * 3, n);
-            // An authoritative move: the mounted QueueComponent must adopt
+            // The user's own wheel input: the mounted QueueComponent must adopt
             // this index rather than reconciling by slot identity.
-            self.queue_cursor_pushed = true;
+            self.playhead.pending_push = Some(QueueCursorPush::Reanchor(scope));
         }
     }
 
@@ -167,6 +168,20 @@ impl App {
         // the Model boundary at execution time, so `None` is correct here
         // (task 5.3d).
         self.open_context_menu_at(col, row, home_cw_selected, None);
+    }
+
+    /// Keyboard `.` in the Queue panel (design: `.` is a selection-dependent
+    /// chord owned by the focused component, not the central router). Pins the
+    /// selection to the component-resolved slot and opens the context menu
+    /// anchored at the selected row (legacy `SelectedItem` anchor), the same
+    /// menu the right-click path builds.
+    pub(super) fn handle_keyboard_context_menu_queue(
+        &mut self,
+        slot_id: Option<mbv_core::playback_queue::QueueSlotId>,
+        home_cw_selected: bool,
+    ) {
+        self.handle_mouse_single_click_queue(slot_id);
+        self.open_context_menu(home_cw_selected, None);
     }
 
     pub(super) fn handle_mouse_single_click_tv(&mut self, lib_idx: usize, hit: TvHit) {

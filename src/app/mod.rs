@@ -149,8 +149,8 @@ use self::types_feed::{
 use self::types_library_tab::LibraryTab;
 use self::types_playback::{
     CastPlaybackTarget, HomeLatestSource, LocalPlaybackTarget, PendingQueueAction, PlaybackState,
-    PlaybackTarget, QueueScope, QueueScopeResolution, RemotePlaybackTarget, RemoteReanchorPopup,
-    RemoteSlotState, SuspendedLocalSession, UndoEntry,
+    PlaybackTarget, QueueCursorPush, QueueScope, QueueScopeResolution, RemotePlaybackTarget,
+    RemoteReanchorPopup, RemoteSlotState, SuspendedLocalSession, UndoEntry,
 };
 use self::types_player_tab::PlayerTab;
 use self::types_selection_modal::{

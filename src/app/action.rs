@@ -14,6 +14,7 @@
 
 use super::input_resolver::KeyChord;
 use super::notify_actions::ToastSeverity;
+use super::types_playback::{PlayheadConfidence, PredictionReason};
 use super::App;
 use crossterm::event::{KeyCode, KeyModifiers};
 use mbv_core::api::EmbyItem;
@@ -462,7 +463,7 @@ impl App {
                             format!("Requesting playback: {label}"),
                             ToastSeverity::Neutral,
                         );
-                        self.set_queue_scope(self.playback_target_queue_scope());
+                        self.set_queue_scope(self.playing_queue_scope());
                         if let Some(occurrence_id) = self.tracked_occurrence_at_queue_index(t) {
                             self.issue_remote_intent(
                                 mbv_core::remote_reconciliation::RemoteIntent::Select {
@@ -492,7 +493,7 @@ impl App {
                 // Local / direct-remote playback.  The same path handles
                 // both Feed and Emby items: jump to an active slot or
                 // cold-start the full canonical queue.
-                let scope = self.visible_queue_scope();
+                let scope = self.viewed_queue_scope();
                 let st = self.player.status.lock().unwrap();
                 let active = st.active;
                 let current_idx = st.current_idx;
@@ -502,7 +503,10 @@ impl App {
                     if t == current_idx && is_audio {
                         self.player.send_command(PlayerCommand::SeekAbsolute(0.0));
                     } else if t != current_idx {
-                        self.pending_active_idx = Some(t);
+                        self.playhead.confidence =
+                            PlayheadConfidence::Predicted(PredictionReason::ItemSelected);
+                        self.playhead.slot = t;
+                        self.playhead.scope = self.playing_queue_scope();
                         if self.player.is_remote() {
                             let Some(slot_id) = slot_id else {
                                 return false;

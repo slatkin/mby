@@ -257,7 +257,7 @@ fn clear_queue_prompt_opens_for_direct_remote_daemon_queue() {
     // early-return, so this test fails without the fix.
     let mut app = make_remote_app_stub(Vec::new(), make_items(3));
     app.set_queue_scope(QueueScope::Remote);
-    assert_eq!(app.visible_queue_scope(), QueueScope::Remote);
+    assert_eq!(app.viewed_queue_scope(), QueueScope::Remote);
 
     app.request_clear_queue();
 

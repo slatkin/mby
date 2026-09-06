@@ -27,6 +27,81 @@ pub(super) enum PlaybackTarget {
     Cast(CastPlaybackTarget),
 }
 
+/// Why an optimistic playhead prediction is not yet confirmed by the playback
+/// owner. Replaces the roles of the former `PendingActiveIdx::Shift` /
+/// `PendingActiveIdx::Jump` respectively.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum PredictionReason {
+    /// A queue edit relocated the still-playing item to a new slot; the live
+    /// `position_ticks`/`runtime_ticks` in the player status lock stay valid
+    /// and are read through untouched.
+    Relocated,
+    /// A different queue item was selected to play; the status lock still holds
+    /// the previous item's position/runtime, so progress reports as 0/0 until
+    /// the player thread reconciles.
+    ItemSelected,
+}
+
+/// How sure the shell is that the projected playhead slot is the one the
+/// playback owner is actually playing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum PlayheadConfidence {
+    Confirmed,
+    Predicted(PredictionReason),
+}
+
+/// The shell's single source of truth for where playback is, how sure we are,
+/// and the one-shot `queue_cursor` push the next `sync_queue` should apply.
+///
+/// Folds in the former `App::pending_active_idx` (the optimistic active index
+/// awaiting player-thread acknowledgement — now `confidence` plus
+/// `scope`/`slot`) and the former `App::queue_cursor_pushed` (the scoped
+/// one-shot cursor push — now `pending_push`).
+///
+/// The resting "no prediction, no armed push" state is `confidence: Confirmed`
+/// with `pending_push: None`; `slot` is only meaningful while `confidence` is
+/// `Predicted`. Position/runtime are never projected here — they are a live
+/// per-frame read from `player.status`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PlayheadProjection {
+    pub(super) scope: QueueScope,
+    pub(super) slot: usize,
+    pub(super) confidence: PlayheadConfidence,
+    /// One-shot cursor push for the next `sync_queue`, scoped to one queue
+    /// scope and consumed only while that scope is visible. `Follow` yields to
+    /// an in-progress user navigation (matching `Predicted(Relocated)`
+    /// follow-the-playhead semantics); `Reanchor` is authoritative and always
+    /// wins.
+    pub(super) pending_push: Option<QueueCursorPush>,
+}
+
+impl PlayheadProjection {
+    /// Resting state: playhead confirmed by the owner, no armed cursor push.
+    pub(super) fn new() -> Self {
+        Self {
+            scope: QueueScope::Local,
+            slot: 0,
+            confidence: PlayheadConfidence::Confirmed,
+            pending_push: None,
+        }
+    }
+
+    /// The predicted active slot (former `PendingActiveIdx::idx`).
+    pub(super) fn idx(&self) -> usize {
+        self.slot
+    }
+
+    /// Whether an in-flight prediction forces progress to 0/0: true only for
+    /// `Predicted(ItemSelected)` (former `PendingActiveIdx::Jump`). Every other
+    /// state reads live position/runtime straight off `player.status`.
+    pub(super) fn suppresses_progress(&self) -> bool {
+        matches!(
+            self.confidence,
+            PlayheadConfidence::Predicted(PredictionReason::ItemSelected)
+        )
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) struct PlaybackState {
     pub(super) active: bool,
@@ -47,6 +122,32 @@ pub(super) struct PlaybackState {
 pub(crate) enum QueueScope {
     Local,
     Remote,
+}
+
+/// Why the shell armed a one-shot `queue_cursor` push for the next
+/// `sync_queue`, and which queue scope it applies to. `sync_queue` consumes
+/// it (clearing the flag) only when the visible scope matches; a push armed
+/// for a scope the user is not looking at is dropped rather than snapping the
+/// other scope's independent selection.
+///
+/// `Follow` tracks the playhead (local mpv advance, now-playing snap,
+/// projected remote/session queue updates) and yields to an in-progress user
+/// navigation (`queue_cursor_held_by_user`). `Reanchor` is an authoritative
+/// content change (scope switch, full queue replacement, wheel scroll,
+/// jump-to-now-playing) whose regenerated slot identities may collide with the
+/// old ones, so it always wins over slot-identity reconciliation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum QueueCursorPush {
+    Follow(QueueScope),
+    Reanchor(QueueScope),
+}
+
+impl QueueCursorPush {
+    pub(crate) fn scope(self) -> QueueScope {
+        match self {
+            Self::Follow(scope) | Self::Reanchor(scope) => scope,
+        }
+    }
 }
 
 /// Derived answers for the local/remote queue boundary.
@@ -254,4 +355,33 @@ pub(super) struct RemoteQueueProjection {
     pub(super) queue_lineage: u64,
     pub(super) occurrence_slots: HashMap<u64, QueueSlotId>,
     pub(super) slot_occurrences: HashMap<QueueSlotId, u64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn relocated_keeps_progress_item_selected_zeroes_it() {
+        let relocated = PlayheadProjection {
+            scope: QueueScope::Local,
+            slot: 3,
+            confidence: PlayheadConfidence::Predicted(PredictionReason::Relocated),
+            pending_push: None,
+        };
+        assert!(!relocated.suppresses_progress());
+
+        let selected = PlayheadProjection {
+            confidence: PlayheadConfidence::Predicted(PredictionReason::ItemSelected),
+            ..relocated
+        };
+        assert!(selected.suppresses_progress());
+        assert_eq!(selected.idx(), 3);
+
+        let confirmed = PlayheadProjection {
+            confidence: PlayheadConfidence::Confirmed,
+            ..relocated
+        };
+        assert!(!confirmed.suppresses_progress());
+    }
 }

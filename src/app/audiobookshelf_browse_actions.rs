@@ -245,8 +245,8 @@ impl App {
         else {
             return;
         };
-        let scope = self.visible_queue_scope();
-        let bound = scope == self.playback_target_queue_scope()
+        let scope = self.viewed_queue_scope();
+        let bound = scope == self.playing_queue_scope()
             && (self.player.is_remote() || self.player.status.lock().unwrap().active);
         if bound && !self.player.can_admit_audiobookshelf() {
             self.flash(
@@ -498,7 +498,7 @@ impl App {
             return;
         }
 
-        let scope = self.playback_target_queue_scope();
+        let scope = self.playing_queue_scope();
         let previous_queue = self.queue_for_scope(scope).clone();
         let existing_index = self
             .queue_for_scope(scope)
@@ -549,7 +549,7 @@ impl App {
             );
             return;
         }
-        self.queue_for_scope_mut(self.visible_queue_scope())
+        self.queue_for_scope_mut(self.viewed_queue_scope())
             .queue
             .append(item);
         self.queue_dirty = true;

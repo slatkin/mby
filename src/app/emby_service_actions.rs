@@ -62,7 +62,7 @@ impl App {
         self.remote_queue_undo_stack.clear();
         self.pending_delete_slot = None;
         self.pending_queue_removal = None;
-        self.pending_active_idx = None;
+        self.playhead.confidence = super::types_playback::PlayheadConfidence::Confirmed;
         self.pending_queue_edit_cursor = None;
         self.remote_tracker = None;
         self.remote_queue_projection = None;

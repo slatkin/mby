@@ -461,6 +461,13 @@ impl Model {
                     self.app.handle_mouse_double_click_queue(slot_id);
                     self.queue_click_reproject();
                 }
+                ShellRequest::QueueContextMenu { slot_id } => {
+                    self.app.handle_keyboard_context_menu_queue(
+                        slot_id,
+                        self.home_continue_watching_selected(),
+                    );
+                    self.queue_click_reproject();
+                }
                 ShellRequest::QueueRowContextMenu { slot_id, anchor } => {
                     // The authoritative Continue-Watching-selected fact is
                     // resolved here (Model boundary) and passed into the App

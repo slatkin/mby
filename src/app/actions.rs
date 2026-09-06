@@ -160,7 +160,7 @@ impl App {
             self.on_queue_replace_silent();
         }
         self.queue_source = queue_source;
-        self.set_queue_scope(self.playback_target_queue_scope());
+        self.set_queue_scope(self.playing_queue_scope());
         // Keep library focus when playing from the library panel.
         if !matches!(self.effective_panel_focus(), PanelFocus::Library) {
             self.set_panel_focus(PanelFocus::Queue);
@@ -301,7 +301,7 @@ impl App {
                     self.flash("Nothing to enqueue".into(), ToastSeverity::Error);
                     return;
                 }
-                let scope = self.visible_queue_scope();
+                let scope = self.viewed_queue_scope();
                 let appended = items.clone();
                 let previous_dirty = self.queue_dirty;
                 let previous_queue = self.queue_for_scope(scope).clone();
@@ -337,9 +337,9 @@ impl App {
     /// succeeded.
     pub(super) fn submit_queue_item(&mut self, item: QueueItem, start_playback: bool) -> bool {
         let scope = if start_playback {
-            self.playback_target_queue_scope()
+            self.playing_queue_scope()
         } else {
-            self.visible_queue_scope()
+            self.viewed_queue_scope()
         };
         if !start_playback {
             let previous_dirty = self.queue_dirty;
