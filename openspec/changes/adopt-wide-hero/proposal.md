@@ -8,7 +8,8 @@ The placement-specific name `Hero-on-left` is also cumbersome. `Wide hero` disti
 
 - Rename the current `Hero-on-left` presentation to `Wide hero` throughout current domain language, architecture, source, and tests; archived OpenSpec history remains unchanged.
 - Mirror the Wide hero arrangement so the single-column Library browser and its pills occupy the left pane while the selected-item hero or provider-owned detail workspace occupies the right pane.
-- Preserve the existing pane proportions, gap, shared breakpoint, minimum-height guard, status-row reserve, focus treatment, content, list state, pointer behavior, and Inline hero fallback.
+- Preserve the existing gap, shared breakpoint, minimum-height guard, status-row reserve, focus treatment, content, list state, pointer behavior, and Inline hero fallback.
+- Re-proportion the Wide hero split so the list/browser pane is the ~40% ratio-driven pane and the hero/workspace pane takes the remaining ~60% (previously the hero was the ~40% pane). The ratio driver moves to the browser width and is clamped so neither pane falls below the shared minimum at the breakpoint.
 - Preserve existing focus and input behavior: Enter focuses structured media content and Esc returns to the Library list; this change introduces no keyboard-routing or directional-key changes.
 - Add no unit tests. Evaluate affected existing tests individually, update tests that protect durable behavior, and remove or relax tests that only freeze obsolete placement or internal naming.
 

@@ -14,7 +14,7 @@ The arrangement is shared, but destination Render Components and Interactive Com
 
 **Non-Goals:**
 - Changing the outer Playback/Queue/Library panel arrangement.
-- Changing pane proportions, breakpoints, height guards, spacing, surfaces, or content.
+- Changing breakpoints, height guards, spacing, surfaces, or content.
 - Changing keyboard routing, Enter/Esc focus behavior, directional-key behavior, mouse semantics, selection, scrolling, persistence, or effects.
 - Adding unit tests or retaining tests that only encode obsolete placement or private names.
 
@@ -30,7 +30,7 @@ Alternative: retain `Hero-on-left` as an abstract name after moving it right. Re
 
 ### D2: Mirror only the shared Wide arrangement
 
-The shared arrangement SHALL continue computing a 40%-width hero pane and a larger browser pane with the existing gap and minimum pane widths, but SHALL place the larger browser pane first and the hero pane second:
+The shared arrangement SHALL compute a ~40%-width list/browser pane and a larger hero pane with the existing gap and minimum pane widths, but SHALL place the browser pane first and the hero pane second. The ratio SHALL be applied to the browser width and clamped to `[MIN_PANE, width - MIN_PANE - GAP]` so neither pane underflows at the shared breakpoint; at the 82-column breakpoint both panes sit at the `MIN_PANE` floor and the split converges toward 40% browser / 60% hero as width grows:
 
 ```text
 Outer left column        Library panel
@@ -42,6 +42,8 @@ Outer left column        Library panel
 ```
 
 The returned geometry SHALL be named by semantic role (`browser`, `hero`) rather than physical side wherever practical. Destination-specific renderers SHALL consume those roles without re-splitting rectangles.
+
+Tests broken purely by the removed `LeftPaneFocus`-style side mirror or by the re-proportion SHALL be deleted, not reworked: the placement and width coordinates pulled from the arrangement's return value are not a durable contract (see the geometry-test rule in `.agents/skills/mbv-frontend/SKILL.md`).
 
 Alternative: reverse panes independently in each destination. Rejected because it duplicates geometry and defeats the shared arrangement contract.
 

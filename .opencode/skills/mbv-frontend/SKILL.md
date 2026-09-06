@@ -266,6 +266,17 @@ one you're relying on:
 3. **Review**, against the checklist below — this is what catches the two
    items above. A clean ast-grep run is not proof of conformance.
 
+## Tests
+
+**Never assert raw UI geometry.** Pane order and pane size are an arrangement's
+contract — assert them **once**, in that arrangement's own unit test, and
+**relationally** (`hero.x == browser.right() + gap`), never as absolute
+coordinates. Every other test asserts **containment in a role rect**
+(`panes.browser.contains(rect)`) or **rendered content** (buffer cells), never a
+coordinate, width, or left/right ordering pulled from an arrangement's return
+value. A test that can only break on a deliberate layout change is churn, not
+coverage — delete it rather than update it.
+
 ## Completion checklist
 
 Before reporting a TUI change complete:
@@ -285,6 +296,9 @@ Before reporting a TUI change complete:
 - [ ] **One router** — no chord is resolved outside `router.rs`/`key_policy.rs`,
   and no new caller of `GlobalViewKey`, a raw `*Key` request, `CONTEXT_STACK`, or
   `handle_legacy_key` was added.
+- [ ] **No geometry assertions** — no new test asserts absolute pane
+  coordinates/widths or left/right ordering from an arrangement's return value;
+  layout claims are buffer-content or role-rect containment assertions.
 - [ ] **Buffer tests** — a characterization test exists (or was added first,
   in its own commit, per the ledger migration flow) and passes unchanged
   where the change is not expected to alter output.
