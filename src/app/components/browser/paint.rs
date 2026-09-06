@@ -84,7 +84,9 @@ impl BrowserComponent {
         let pills_area = right_pane.pills_area;
         let list_panel = right_pane.list_panel;
 
-        if self.narrow_extras.feed_items.is_some() {
+        if self.inline_search.is_active() {
+            self.layout.selector_tabs = Vec::new();
+        } else if self.narrow_extras.feed_items.is_some() {
             crate::app::render::paint_feed_group_pills_row(
                 f,
                 pills_area,

@@ -51,6 +51,7 @@ fn emby_browser_search_open_shortcut_letter_becomes_query_text() {
 #[test]
 fn emby_browser_wide_right_rail_paints_inline_search() {
     let mut browser = BrowserComponent::new_for_kind(BrowserKind::Movies);
+    browser.configure_wide_movies(false, true);
     // The Hero pane's own selected-item title ("Focused Movie") is
     // deliberately distinct from the search result's name below, so a text
     // match can only come from an actual painted result row in the right
@@ -99,6 +100,14 @@ fn emby_browser_wide_right_rail_paints_inline_search() {
     assert!(
         !frame_text.contains("┌"),
         "ordinary bordered search input not painted"
+    );
+    assert!(
+        !frame_text.contains("A–C"),
+        "ordinary letter pills are replaced while search is active"
+    );
+    assert!(
+        browser.test_layout().selector_tabs.is_empty(),
+        "ordinary pill hit regions are unavailable while search is active"
     );
 
     let mut found = false;

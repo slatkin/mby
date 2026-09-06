@@ -670,14 +670,8 @@ impl Component for BrowserComponent {
             let loading = self.inline_search.loading();
             let cursor = self.inline_search.cursor();
             let scroll_in = self.inline_search.scroll();
-            let (pills_area, list_area) = if self.narrow_extras.show_letter_pills
-                || self.narrow_extras.feed_items.is_some()
-            {
-                let areas = crate::app::render::arrangements::wide_hero::pill_bar_areas(area);
-                (areas.pills_area, areas.content_area)
-            } else {
-                (Rect::default(), area)
-            };
+            let areas = crate::app::render::arrangements::wide_hero::pill_bar_areas(area);
+            let (pills_area, list_area) = (areas.pills_area, areas.content_area);
             let columns = crate::app::library_column_width::library_column_count(list_area.width);
             let new_scroll = crate::app::render::render_inline_search(
                 frame,
