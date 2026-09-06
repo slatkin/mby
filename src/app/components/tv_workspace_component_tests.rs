@@ -390,9 +390,8 @@ fn slash_emits_open_inline_search() {
     );
 }
 
-/// Wide hero Wide paints Inline Search in the right rail (design.md D3):
-/// the shared bordered input/result painter lands in the series rail, not
-/// the episode/Hero pane to its left, which remains visible.
+/// Wide hero Wide paints exactly one shared Inline Search presentation in the
+/// right rail (design.md D3), replacing the ordinary letter-selector row.
 #[test]
 fn wide_tv_search_paints_in_browser_pane_not_hero_pane() {
     let mut component = TvWorkspaceComponent::new();
@@ -405,7 +404,7 @@ fn wide_tv_search_paints_in_browser_pane_not_hero_pane() {
         None,
         0,
         None,
-        false,
+        true,
     ));
     component.on(&Event::Keyboard(KeyEvent {
         code: Key::Char('/'),
@@ -434,6 +433,12 @@ fn wide_tv_search_paints_in_browser_pane_not_hero_pane() {
     );
 
     let buffer = terminal.backend().buffer();
+    let rendered: String = buffer.content().iter().map(|cell| cell.symbol()).collect();
+    assert_eq!(rendered.matches("SEARCH:").count(), 1);
+    assert!(
+        !rendered.contains("A–C"),
+        "ordinary selector must be replaced"
+    );
     let mut found_in_rail = false;
     let mut found_in_left_pane = false;
     for y in list_area.y..list_area.y + list_area.height {

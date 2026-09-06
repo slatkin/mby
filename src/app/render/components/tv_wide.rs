@@ -253,14 +253,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
     }
 
     let right_pane = wide_hero::wide_hero_browser_pane(browser_panel, browser_area);
-    if ctx.list.is_search_active() {
-        crate::app::render::components::hero::render_search_box(
-            f,
-            right_pane.pills_area,
-            ctx.list.search_query.as_deref().unwrap_or_default(),
-            ctx.list.search_loading,
-        );
-    } else if ctx.show_letter_pills {
+    if !ctx.list.is_search_active() && ctx.show_letter_pills {
         let selected = ctx
             .list
             .letter_filter
@@ -312,7 +305,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
         let scroll_in = inline_search.scroll();
         let new_scroll = crate::app::render::render_inline_search(
             f,
-            Rect::default(),
+            right_pane.pills_area,
             list_area,
             &query,
             loading,
