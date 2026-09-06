@@ -4,4 +4,4 @@
 
 ## 2. Album result activation
 
-- [x] 2.1 Make Enter on an album result dismiss Inline Search, re-anchor the standard library presentation to the album's natural pill/list position, and enable track-selection mode; extend existing destination activation/track-selection coverage and verify focused tests pass.
+- [ ] 2.1 Make Enter on an album result dismiss Inline Search, re-anchor the standard library presentation to the album's natural pill/list position, and enable track-selection mode; extend existing destination activation/track-selection coverage and verify focused tests pass.
