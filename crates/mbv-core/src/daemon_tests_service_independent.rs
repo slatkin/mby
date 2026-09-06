@@ -288,7 +288,24 @@ fn audiobookshelf_disconnect_stops_queue_and_purges_abs_slots() {
     .unwrap();
 
     let mut queue = PlaybackQueue::from_queue_items(
-        vec![abs_qi("li_1", "ep_1"), emby_qi("movie1", "Video", "Movie")],
+        vec![
+            abs_qi("li_1", "ep_1"),
+            book_qi("book_1"),
+            emby_qi("movie1", "Video", "Movie"),
+            QueueItem::Feed(FeedEntry {
+                guid: "feed-1".into(),
+                title: "Episode".into(),
+                enclosure_url: Some("https://example.test/episode.mp3".into()),
+                link: None,
+                mime_type: Some("audio/mpeg".into()),
+                duration_ticks: None,
+                pub_date_secs: None,
+                feed_kind: Some(crate::config::FeedKind::Audio),
+                feed_id: None,
+                position_ticks: 0,
+                played: false,
+            }),
+        ],
         Some(0),
     );
     let mut source = QueueSource::Remote;
@@ -302,14 +319,21 @@ fn audiobookshelf_disconnect_stops_queue_and_purges_abs_slots() {
     reconcile_abs_with_queue(0, &mut current, &mut queue, &mut source).unwrap();
 
     assert!(current.is_none(), "removal drops the owner context");
-    assert_eq!(queue.len(), 1, "ABS slot purged, Emby slot retained");
-    assert!(queue.slots()[0].item.is_emby());
+    assert_eq!(
+        queue.len(),
+        2,
+        "ABS episode and book slots purged, Emby and Feed slots retained"
+    );
+    assert!(
+        queue.slots()[0].item.is_emby() && queue.slots()[1].item.is_feed(),
+        "Emby and Feed slots must remain in canonical order"
+    );
     assert!(
         queue
             .slots()
             .iter()
-            .all(|slot| !slot.item.is_audiobookshelf()),
-        "no Audiobookshelf slot may survive a disconnect"
+            .all(|slot| !slot.item.is_audiobookshelf_any()),
+        "no Audiobookshelf episode or book slot may survive a disconnect"
     );
 }
 
