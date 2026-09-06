@@ -56,7 +56,6 @@ pub(in crate::app) use arrangements::wide_hero::{
     wide_hero_browser_border, wide_hero_browser_pane, wide_hero_hero_pane, wide_hero_presentation,
     LeftPaneFocus, PANE_PAD_X, PANE_PAD_Y,
 };
-pub(in crate::app) use components::hero::render_search_box;
 pub(in crate::app) use components::home_hero::{
     prepare_wide_emby_hero_card, render_home_hero_content, HeroData,
 };

@@ -45,9 +45,9 @@ fn emby_browser_search_open_shortcut_letter_becomes_query_text() {
     );
 }
 
-/// Wide hero Wide paints Inline Search in the right rail (design.md D3):
-/// the shared bordered input/result painter lands to the right of the Hero
-/// pane, not overlapping it, and the Hero pane itself remains painted.
+/// Wide hero Wide paints the shared one-row Inline Search bar and results in
+/// the right rail (design.md D3), without also painting the ordinary browser
+/// pill presentation.
 #[test]
 fn emby_browser_wide_right_rail_paints_inline_search() {
     let mut browser = BrowserComponent::new_for_kind(BrowserKind::Movies);
@@ -89,6 +89,18 @@ fn emby_browser_wide_right_rail_paints_inline_search() {
     );
 
     let buffer = terminal.backend().buffer();
+    let frame_text: String = (0..buffer.area().height)
+        .flat_map(|y| (0..buffer.area().width).map(move |x| buffer.cell((x, y)).unwrap().symbol()))
+        .collect();
+    assert!(
+        frame_text.contains("SEARCH:"),
+        "shared one-row search bar painted"
+    );
+    assert!(
+        !frame_text.contains("┌"),
+        "ordinary bordered search input not painted"
+    );
+
     let mut found = false;
     for y in list_area.y..list_area.y + list_area.height {
         // Scan only the right rail's own x-range: the Hero pane paints its

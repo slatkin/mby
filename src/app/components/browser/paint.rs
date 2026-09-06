@@ -8,9 +8,9 @@ use crate::app::components::component_id::BrowserKind;
 use crate::app::palette;
 use crate::app::render::{
     padded_rect, prepare_wide_emby_hero_card, render_count_label, render_home_hero_content,
-    render_pill_bar, render_search_box, wide_hero_browser_border, wide_hero_browser_pane,
-    wide_hero_hero_pane, wide_library_panes, HeroData, LetterFilter, LibraryListRenderCtx, PillBar,
-    PANE_PAD_X, PANE_PAD_Y,
+    render_pill_bar, wide_hero_browser_border, wide_hero_browser_pane, wide_hero_hero_pane,
+    wide_library_panes, HeroData, LetterFilter, LibraryListRenderCtx, PillBar, PANE_PAD_X,
+    PANE_PAD_Y,
 };
 
 impl BrowserComponent {
@@ -84,14 +84,7 @@ impl BrowserComponent {
         let pills_area = right_pane.pills_area;
         let list_panel = right_pane.list_panel;
 
-        if ctx.is_search_active() {
-            render_search_box(
-                f,
-                pills_area,
-                ctx.search_query.as_deref().unwrap_or_default(),
-                ctx.search_loading,
-            );
-        } else if self.narrow_extras.feed_items.is_some() {
+        if self.narrow_extras.feed_items.is_some() {
             crate::app::render::paint_feed_group_pills_row(
                 f,
                 pills_area,
@@ -137,7 +130,7 @@ impl BrowserComponent {
             let scroll_in = self.inline_search.scroll();
             let new_scroll = crate::app::render::render_inline_search(
                 f,
-                Rect::default(),
+                pills_area,
                 content,
                 &query,
                 loading,
