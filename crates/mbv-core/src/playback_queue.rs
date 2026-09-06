@@ -298,9 +298,7 @@ impl PlaybackQueue {
 
     /// Returns `true` when the queue contains any Audiobookshelf slots.
     pub fn has_audiobookshelf_entries(&self) -> bool {
-        self.slots
-            .iter()
-            .any(|s| matches!(s.item, QueueItem::Audiobookshelf(_)))
+        self.slots.iter().any(|s| s.item.is_audiobookshelf_any())
     }
 
     /// Returns `true` when the queue contains any non-Emby slots (Feed or

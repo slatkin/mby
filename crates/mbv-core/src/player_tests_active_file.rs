@@ -41,6 +41,19 @@ fn abs_item() -> QueueItem {
     })
 }
 
+fn abs_book_item() -> QueueItem {
+    QueueItem::AudiobookshelfBook(crate::playback_queue::AudiobookshelfBookQueueItem {
+        library_item_id: "book".into(),
+        title: "Book".into(),
+        author: None,
+        duration_ticks: Some(100_u64),
+        position_ticks: 0,
+        played: false,
+        is_finished: false,
+        cover_path: None,
+    })
+}
+
 #[test]
 fn failed_eager_transition_preserves_canonical_queue_and_mode() {
     let (mut run, _) = make_queue_session_for_pos_tests(1);
