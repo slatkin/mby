@@ -8,6 +8,8 @@
 
 - [x] 2.1 Change the shared Wide hero pane calculation to place the existing larger browser pane on the left and the existing approximately 40% hero pane on the right while preserving the gap, minimum widths, breakpoint, minimum-height guard, padding, and status-row reserve; verify `cargo check -p mbv` succeeds.
 - [x] 2.2 Update the shared browser-pane pills/list framing and hero-pane fill/content-box primitives to consume role-named geometry without destination-owned splitting; verify `ast-grep scan` reports no frontend-boundary violation.
+- [x] 2.3 Reverse the pane ratio so the list/browser pane is the ~40% ratio-driven pane and the hero pane takes the remainder; clamp the browser width (not the hero) so neither pane drops below the shared minimum at the breakpoint; keep gap, breakpoint, min-height guard, padding, and status-row reserve; verify `cargo check -p mbv` and the suite pass.
+- [x] 2.4 Name `WideLibraryPanes` by semantic role (`hero_panel`/`browser_panel`/`hero_area`/`browser_area`) and remove the role→physical-side relabel in `wide_library_panes`; compiler-walk consumers and 1-hop bindings; verify `ast-grep scan` clean and no `left_/right_` pane names remain in `library.rs`.
 
 ## 3. Adopt mirrored geometry everywhere
 
