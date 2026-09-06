@@ -312,6 +312,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
         let scroll_in = inline_search.scroll();
         let new_scroll = crate::app::render::render_inline_search(
             f,
+            Rect::default(),
             list_area,
             &query,
             loading,

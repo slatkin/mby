@@ -137,6 +137,7 @@ impl BrowserComponent {
             let scroll_in = self.inline_search.scroll();
             let new_scroll = crate::app::render::render_inline_search(
                 f,
+                Rect::default(),
                 content,
                 &query,
                 loading,

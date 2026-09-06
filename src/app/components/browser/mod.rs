@@ -691,6 +691,7 @@ impl Component for BrowserComponent {
             let columns = crate::app::library_column_width::library_column_count(list_area.width);
             let new_scroll = crate::app::render::render_inline_search(
                 frame,
+                Rect::default(),
                 list_area,
                 &query,
                 loading,

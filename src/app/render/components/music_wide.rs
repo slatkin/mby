@@ -612,6 +612,7 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
             let scroll_in = inline_search.scroll();
             let new_scroll = crate::app::render::render_inline_search(
                 f,
+                Rect::default(),
                 browser_area,
                 &query,
                 loading,
