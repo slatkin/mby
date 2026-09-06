@@ -9,8 +9,11 @@
 //! "Reconciling with D16").
 //!
 //! Recognition covers `Click`/`DoubleClick`/`RightClick` and wheel `Scroll`.
-//! `Moved` and `Drag` events are accepted and ignored here; hover-move spam
-//! is dropped by the consuming component's first `on()` arm
+//! A left press followed by a release at a different point (a drag) completes
+//! as a `Click` at the release point, so a gesture that begins off a surface
+//! (e.g. in the Inline Search bar) still lands on the row it ends on.
+//! `Moved` and in-between `Drag` events are accepted and ignored here;
+//! hover-move spam is dropped by the consuming component's first `on()` arm
 //! (`MouseEventKind::Moved => return None`), never by this module (design.md
 //! D7).
 //!
@@ -56,6 +59,9 @@ pub enum MouseGesture {
 pub struct MouseGestureState {
     last_click: Option<(Instant, Position)>,
     last_scroll: Option<Instant>,
+    /// Position of the most recent unreleased left press, for drag-release
+    /// recognition.
+    press: Option<Position>,
 }
 
 #[allow(dead_code)] // consumers land in tasks 3.4-3.6
@@ -66,8 +72,10 @@ impl MouseGestureState {
 
     /// Feed one raw mouse event; return the gesture it completes, if any.
     ///
-    /// `Moved`, `Drag(_)`, `Up(_)` and horizontal wheel events are accepted
-    /// and produce `None` (they must not panic — design.md D7).
+    /// `Moved`, in-between `Drag(_)` and horizontal wheel events are accepted
+    /// and produce `None` (they must not panic — design.md D7). A left
+    /// `Up(_)` at a point other than the press origin completes as a `Click`
+    /// at the release point.
     pub fn recognize(&mut self, event: &MouseEvent) -> Option<MouseGesture> {
         self.recognize_at(event, Instant::now())
     }
@@ -83,6 +91,7 @@ impl MouseGestureState {
                     .last_click
                     .is_some_and(|(t, p)| now.duration_since(t) < DOUBLE_CLICK_WINDOW && p == at);
                 self.last_click = Some((now, at));
+                self.press = Some(at);
                 Some(if is_double {
                     MouseGesture::DoubleClick(at)
                 } else {
@@ -90,6 +99,13 @@ impl MouseGestureState {
                 })
             }
             MouseEventKind::Down(MouseButton::Right) => Some(MouseGesture::RightClick(at)),
+            MouseEventKind::Up(MouseButton::Left) => match self.press.take() {
+                // A release away from the press origin (a drag) lands as a
+                // click on the row it ends on; a release at the origin is the
+                // tail of a plain click already emitted on `Down`.
+                Some(origin) if origin != at => Some(MouseGesture::Click(at)),
+                _ => None,
+            },
             MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {
                 let allow = self
                     .last_scroll
@@ -204,6 +220,37 @@ mod tests {
                 at: Position { x: 1, y: 1 },
                 delta: -1
             })
+        );
+    }
+
+    #[test]
+    fn left_press_then_release_elsewhere_is_a_click_at_the_release_point() {
+        let mut s = MouseGestureState::new();
+        let t0 = Instant::now();
+        // Press starts off a surface (e.g. the Inline Search bar).
+        s.recognize_at(&ev(MouseEventKind::Down(MouseButton::Left), 2, 1), t0);
+        assert_eq!(
+            s.recognize_at(
+                &ev(MouseEventKind::Up(MouseButton::Left), 2, 6),
+                t0 + Duration::from_millis(80)
+            ),
+            Some(MouseGesture::Click(Position { x: 2, y: 6 })),
+            "drag release lands as a click on the row it ends on"
+        );
+    }
+
+    #[test]
+    fn left_release_at_the_press_origin_emits_nothing() {
+        let mut s = MouseGestureState::new();
+        let t0 = Instant::now();
+        s.recognize_at(&ev(MouseEventKind::Down(MouseButton::Left), 3, 4), t0);
+        assert_eq!(
+            s.recognize_at(
+                &ev(MouseEventKind::Up(MouseButton::Left), 3, 4),
+                t0 + Duration::from_millis(10)
+            ),
+            None,
+            "the plain click was already emitted on Down"
         );
     }
 
