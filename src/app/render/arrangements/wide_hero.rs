@@ -258,8 +258,8 @@ pub(in crate::app) enum LeftPaneFocus {
     Workspace(bool),
 }
 
-/// Paints the Wide hero left pane: fills the [`wide_hero_presentation`]
-/// left panel with the surface [`LeftPaneFocus`] resolves to, and returns the
+/// Paints the Wide hero right pane: fills the [`wide_hero_presentation`]
+/// right pane with the surface [`LeftPaneFocus`] resolves to, and returns the
 /// shared content inset (`PANE_PAD_X`, `PANE_PAD_Y`). One owner for fill,
 /// extent, inset, and focus resolution (design.md D-A) -- callers must not
 /// resize, re-derive, or conditionally skip the fill, and must not apply a
@@ -267,7 +267,7 @@ pub(in crate::app) enum LeftPaneFocus {
 ///
 /// Takes `content_area` rather than a pane rect so a caller has nothing to
 /// hand in but the rect the arrangement already consumes -- it cannot supply
-/// a mutated `left_panel`. `wide_hero_presentation` is pure and cheap, so
+/// a mutated right pane rect. `wide_hero_presentation` is pure and cheap, so
 /// recomputing it here costs nothing.
 pub(in crate::app) fn wide_hero_hero_pane(
     f: &mut Frame,
@@ -275,7 +275,7 @@ pub(in crate::app) fn wide_hero_hero_pane(
     focus: LeftPaneFocus,
 ) -> Option<Rect> {
     let WideHeroPanes {
-        hero: left_panel, ..
+        hero: hero_panel, ..
     } = wide_hero_presentation(content_area)?;
     let background = match focus {
         LeftPaneFocus::ReadOnly => palette::SURFACE_RESTING,
@@ -283,9 +283,9 @@ pub(in crate::app) fn wide_hero_hero_pane(
     };
     f.render_widget(
         Block::default().style(Style::default().bg(background)),
-        left_panel,
+        hero_panel,
     );
-    Some(padded_rect(left_panel, PANE_PAD_X, PANE_PAD_Y))
+    Some(padded_rect(hero_panel, PANE_PAD_X, PANE_PAD_Y))
 }
 
 #[cfg(test)]
