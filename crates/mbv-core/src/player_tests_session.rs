@@ -454,6 +454,71 @@ fn subtitle_stream_index_maps_to_mpv_subtitle_id() {
     assert_eq!(status.subtitle_stream_index_to_mpv_id(1), None);
 }
 
+// ── SessionReporter FIFO worker ordering (bound-daemon-playback-memory) ──
+
+// A transition sends the outgoing stopped-report before the incoming
+// start-report; the worker must execute them in that order, not race them
+// as independent threads. Observed via a local HTTP stub recording arrival
+// order rather than wall-clock timing, so a swap of the two sends (verified
+// locally while writing this test, then reverted) fails it.
+#[test]
+fn transition_enqueues_stopped_report_before_start_report() {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let observed: Arc<Mutex<Vec<&'static str>>> = Arc::new(Mutex::new(Vec::new()));
+    let observed_bg = observed.clone();
+    let server = thread::spawn(move || {
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 4096];
+            let n = stream.read(&mut buf).unwrap();
+            let request = String::from_utf8_lossy(&buf[..n]);
+            let label = if request.starts_with("POST /Sessions/Playing/Stopped") {
+                "stopped"
+            } else if request.starts_with("POST /Sessions/Playing ") {
+                "start"
+            } else {
+                "unknown"
+            };
+            observed_bg.lock().unwrap().push(label);
+            let _ = write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}"
+            );
+        }
+    });
+
+    let config = crate::config::Config {
+        server_url: format!("http://{addr}"),
+        ..Default::default()
+    };
+    let client = Arc::new(EmbyClient::new(config));
+    let status = Arc::new(Mutex::new(PlayerStatus::default()));
+    let reporter = SessionReporter::new(
+        client,
+        None,
+        ItemId::new("prev-item"),
+        MediaSourceId::new("prev-msid"),
+        EmbySessionId::new("sid"),
+        true,
+        status,
+    );
+
+    reporter.report_stopped_background(0);
+    let new_item = make_media_item("next-item");
+    reporter.report_start_background(
+        &new_item,
+        &MediaSourceId::new("next-msid"),
+        &EmbySessionId::new("sid"),
+    );
+
+    server.join().unwrap();
+    assert_eq!(*observed.lock().unwrap(), vec!["stopped", "start"]);
+}
+
 // ── PlayerStatus::next_idx / previous_idx / toggle_to_reach ──────────────
 // (issue #80: single source of truth for next/previous/toggle-play bounds
 // and paused-state logic, replacing four near-identical copies.)

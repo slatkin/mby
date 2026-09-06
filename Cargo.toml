@@ -22,6 +22,7 @@ tungstenite = { version = "0.30", features = ["native-tls"] }
 redb = "2"
 log = "0.4"
 libc = "0.2"
+mimalloc = "0.1"
 pipewire = "0.10.1"
 nix = { version = "0.31", features = ["fs", "process", "signal", "term", "socket"] }
 
@@ -58,6 +59,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 unicode-width = "0.2.2"
 log.workspace = true
 libc.workspace = true
+mimalloc.workspace = true
 nix.workspace = true
 tui-scrollbar = "0.2.7"
 time = { version = "0.3", features = ["parsing"] }

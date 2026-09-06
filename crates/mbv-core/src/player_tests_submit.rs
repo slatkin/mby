@@ -310,7 +310,47 @@ fn init_mpv_headless_disables_cover_art_display() {
     })
     .unwrap();
     assert_eq!(mpv.get_property::<String>("audio-display").unwrap(), "no");
+    // bound-daemon-playback-memory: headless runs use an audio-sized demuxer
+    // cache budget instead of the video-sized one below.
+    assert_eq!(
+        mpv.get_property::<i64>("demuxer-max-bytes").unwrap(),
+        10 * 1024 * 1024
+    );
+    assert_eq!(
+        mpv.get_property::<i64>("demuxer-max-back-bytes").unwrap(),
+        10 * 1024 * 1024
+    );
     mpv.set_property("ao", "null").unwrap();
+    drop(mpv);
+    drop(env_lock);
+}
+
+#[test]
+fn init_mpv_non_headless_uses_video_sized_demuxer_cache() {
+    // bound-daemon-playback-memory: a run with a video window keeps the
+    // existing 50M/100M demuxer cache budget unchanged.
+    let env_lock = crate::config::tests::SYS_ENV_LOCK.lock().unwrap();
+    let (mpv, _) = init_mpv(&MpvRunConfig {
+        headless: false,
+        use_mpv_config: false,
+        no_scripts: true,
+        always_skip_intro: false,
+        audio_pipe_path: None,
+        audio_pipe_samplerate: 0,
+        audio_pipe_bitdepth: 0,
+        audio_device: None,
+    })
+    .unwrap();
+    assert_eq!(
+        mpv.get_property::<i64>("demuxer-max-bytes").unwrap(),
+        50 * 1024 * 1024
+    );
+    assert_eq!(
+        mpv.get_property::<i64>("demuxer-max-back-bytes").unwrap(),
+        100 * 1024 * 1024
+    );
+    mpv.set_property("ao", "null").unwrap();
+    mpv.set_property("vo", "null").unwrap();
     drop(mpv);
     drop(env_lock);
 }
