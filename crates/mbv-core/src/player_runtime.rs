@@ -479,8 +479,6 @@ fn init_mpv(config: &MpvRunConfig) -> Result<(Mpv, bool), String> {
         opt!("input-default-bindings", "yes");
         opt!("input-vo-keyboard", "yes");
         opt!("wayland-app-id", "mbv");
-        opt!("demuxer-max-bytes", "50M");
-        opt!("demuxer-max-back-bytes", "100M");
         opt!("gapless-audio", "weak");
         if no_scripts || !use_mpv_config {
             opt!("load-scripts", "no");
@@ -521,6 +519,13 @@ fn init_mpv(config: &MpvRunConfig) -> Result<(Mpv, bool), String> {
         // #656: with vo=null, attached cover art would still be selected and
         // decoded (video/image=true per audio track) for no benefit.
         let _ = mpv.set_property("audio-display", "no");
+        // Audio-sized demuxer cache: a headless host has no video window to
+        // justify the video-sized budget below.
+        let _ = mpv.set_property("demuxer-max-bytes", "10M");
+        let _ = mpv.set_property("demuxer-max-back-bytes", "10M");
+    } else {
+        let _ = mpv.set_property("demuxer-max-bytes", "50M");
+        let _ = mpv.set_property("demuxer-max-back-bytes", "100M");
     }
     let mut startup_pause_armed = false;
     if let Some(path) = &config.audio_pipe_path {
