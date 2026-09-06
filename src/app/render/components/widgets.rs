@@ -340,19 +340,31 @@ pub(in crate::app) fn render_pill_bar(
         count
     };
 
-    // Advance the scroll window until the selected pill is visible.
-    let mut scroll_start = 0usize;
-    loop {
-        let avail = bar_w
-            .saturating_sub(prefix_w)
-            .saturating_sub(if scroll_start > 0 { 2 } else { 0 }) // "‹ "
-            .saturating_sub(2); // reserve for " ›"
-        let cnt = count_fitting(scroll_start, avail);
-        if cnt == 0 || scroll_start + cnt > bar.selected_pos {
-            break;
-        }
-        scroll_start += 1;
-    }
+    // Keep the selected pill near the middle of the visible window when it
+    // overflows. Starting at zero always put the selection at the trailing
+    // edge, so moving backward looked as though the final visible pill stayed
+    // focused.
+    // ponytail: O(n²) over a short selector row; use a sliding window only if
+    // selector counts become large enough to measure.
+    let scroll_start = (0..=bar.selected_pos.min(n - 1))
+        .filter_map(|start| {
+            let avail = bar_w
+                .saturating_sub(prefix_w)
+                .saturating_sub(if start > 0 { 2 } else { 0 }) // "‹ "
+                .saturating_sub(2); // reserve for " ›"
+            let count = count_fitting(start, avail);
+            let end = (start + count).min(n);
+            if count == 0 || bar.selected_pos >= end {
+                return None;
+            }
+            Some((
+                (bar.selected_pos - start).min(end - 1 - bar.selected_pos),
+                start,
+            ))
+        })
+        .max_by_key(|(edge_distance, start)| (*edge_distance, std::cmp::Reverse(*start)))
+        .map(|(_, start)| start)
+        .unwrap_or(0);
 
     let has_left = scroll_start > 0;
     let avail_pills = bar_w

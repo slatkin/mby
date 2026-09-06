@@ -77,3 +77,23 @@ fn pill_bar_scrolls_to_keep_selected_visible_and_maps_its_id() {
         "narrow row should not fit all six pills"
     );
 }
+
+#[test]
+fn pill_bar_does_not_pin_a_backwards_selection_to_the_trailing_edge() {
+    let labels: Vec<String> = (0..8).map(|i| format!("Group{i}")).collect();
+    let ids: Vec<usize> = (0..8).map(|i| 20 + i).collect();
+
+    let tabs = render_pill_bar_hitboxes(&labels, &ids, 4, 38);
+    let Some(selected) = tabs.iter().position(|(_, id)| *id == 24) else {
+        panic!("selected pill should be visible");
+    };
+
+    assert!(
+        selected > 0,
+        "selected pill should have a visible predecessor"
+    );
+    assert!(
+        selected + 1 < tabs.len(),
+        "selected pill should have a visible successor"
+    );
+}
