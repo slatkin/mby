@@ -18,6 +18,6 @@
 
 ## 4. Gates
 
-- [ ] 4.1 Run `cargo fmt`, `cargo clippy --workspace --all-targets`, `cargo nextest run --workspace`, `ast-grep scan`, and `make check-code-file-lines`; verify all pass with no new warnings and no governed file over 800 lines.
+- [x] 4.1 Run `cargo fmt`, `cargo clippy --workspace --all-targets`, `cargo nextest run --workspace`, `ast-grep scan`, and `make check-code-file-lines`; verify all pass with no new warnings and no governed file over 800 lines.
 - [ ] 4.2 Sync the applied deltas into `openspec/specs/` (new `headless-playback-memory-footprint`, modified `video-feed-playback-buffering`) and archive the change. Verify `openspec validate` reports no errors.
 - [ ] 4.3 Deploy the built `mbvd` to `music.local`, confirm over mpv IPC that `demuxer-max-back-bytes` reads the headless value on a live audio run, and post the observed value plus a starting RSS baseline to issue #656 for comparison during ordinary listening.
