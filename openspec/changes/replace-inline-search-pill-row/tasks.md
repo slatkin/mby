@@ -5,5 +5,5 @@
 ## 2. Destination Composition
 
 - [x] 2.1 Update Browser Normal and Wide composition to pass the existing pill slot and normal content rectangle to Inline Search instead of painting pill controls or a separate search bar; extend the existing Browser Inline Search test only as needed to verify search results replace the ordinary pill presentation.
-- [ ] 2.2 Update MusicWorkspace Normal and Wide composition to use the same shared search presentation instead of group pills or a pre-painted search bar; update the existing Music workspace search characterization only as needed to verify flat search results replace the group-pill presentation.
+- [x] 2.2 Update MusicWorkspace Normal and Wide composition to use the same shared search presentation instead of group pills or a pre-painted search bar; update the existing Music workspace search characterization only as needed to verify flat search results replace the group-pill presentation.
 - [ ] 2.3 Update TvWorkspace Wide composition to use the shared search presentation in the existing browser rail; update the existing TV workspace search characterization only as needed to verify search results replace the ordinary selector presentation while existing Normal/Wide transfer coverage continues to pass.
