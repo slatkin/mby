@@ -1,178 +1,125 @@
 ## Context
 
-See `proposal.md` — Why. The structural facts that shape the approach:
+See `proposal.md` - Why. The current system represents one Bound queue and its playback position in several independently mutable forms:
 
-- Three `PlaybackQueue` instances hold the same logical queue: the Client's
-  `PlayerTab.queue`, the owner's canonical queue in `daemon_control`, and
-  `PlaybackRun.queue`. The first two exchange slot identity over ctrl
-  (`UnifiedQueue*`); the third is handed items through
-  `PlaybackQueue::from_queue_items`, which allocates fresh ids from 1, so its
-  identities are unrelated to the owner's.
-- `PlaybackQueue::from_slot_items` already exists and preserves caller-assigned
-  ids. It is used at the ctrl boundary but not when constructing a Playback run.
-- The owner ↔ Playback run channel is an in-process `mpsc<PlayerCommand>` plus
-  `mpsc<PlayerEvent>`. `PlayerCommand` is serialized *only* through
-  `CtrlCmd::PlayerCmd(WireCommand)`.
-- Every queue mutation a current Client issues to a remote owner already goes
-  through `UnifiedQueue*` or `PlaybackIntent`
-  (`remote_player.rs`, `player_proxy.rs`). The queue-addressing `WireCommand`
-  variants have no in-repo sender.
-- `PlaybackRun` carries `current_idx`, `PlayerStatus.current_idx` and
-  `queue.active_slot_id()` for the same fact, reconciled by
-  `refresh_current_idx_from_queue()` / `sync_status_position()`.
+- `PlayerTab.queue` is authoritative in Bare mode but becomes a Client-side copy for an out-of-process Player owner.
+- `daemon_run` owns another `PlaybackQueue` and resolves Client slot commands into indices before sending them onward.
+- `PlaybackRun` constructs a third `PlaybackQueue` with unrelated slot ids and mirrors its active slot through `current_idx`, `PlayerStatus.current_idx`, `forced_slot_id`, and mpv playlist properties.
+- The shell predicts active playback in `PlayheadProjection` and later treats an equal index and queue length as confirmation. One prediction and one pending cursor push are overwritten by rapid actions.
+- `PlaybackIntentState` already supplies request identity and outcomes for direct playback, but stores an ordinal `target_idx` and permits more than one transition to reach mpv before observation establishes which transition produced an event.
+
+The existing mpv playlist and active-file projection behaviors are working constraints. This change alters their control and identity boundaries, not media loading behavior.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Slot identity is the only cross-component address for a queue occurrence.
-- A stale address fails loudly at the receiver instead of being clamped.
-- One queue-start lifecycle, one near-end rule, one Consume site.
-- No `CTRL_PROTOCOL_VERSION` bump and no new negotiated capability.
+- One canonical `PlaybackQueue` for each Player owner.
+- One transition coordinator shared by Bare, Local daemon, and packaged `mbvd` ownership.
+- Stable slot identity and monotonic transition identity across the owner/Playback-run boundary.
+- One coherent snapshot consumed by Clients without optimistic reconciliation.
+- Deletion of duplicate queue authority, index clamps, and overwrite-prone pending fields.
 
 **Non-Goals:**
 
-- Collapsing `current_idx` / `PlayerStatus.current_idx` into the queue's active
-  slot. Slot identity crossing the boundary is what makes that removal safe; it
-  is a follow-up, not a precondition.
-- Client-side cursor state (`queue_cursor` and companions) — see the proposal's
-  out-of-scope note.
-- Splitting `player.rs`'s `include!` chain. Real debt, unrelated axis.
-- Any change to persisted `QueueState`. Slot ids stay runtime-only.
+- Changing mpv playlist construction, source preparation, or playback continuity.
+- Changing Composed queue ownership or ordinary queue-panel cursor and scroll state.
+- Persisting runtime slot or transition ids.
+- Bringing Cast dispatch or Session watch under Player-owner queue semantics.
+- Reorganizing the `player.rs` `include!` chain.
 
 ## Decisions
 
-### D1: Delete the queue-addressing wire variants rather than widening them
+### D1: The Player owner holds the only canonical Bound queue
 
-`WireCommand` loses `JumpTo`, `QueueAppend`, `QueueRemove`, `QueueMove`,
-`ReplaceQueue`, `LoadNew`. Transport variants (pause, seek, volume, tracks,
-next-up, skip-intro) stay byte-identical.
+The owner event loop holds one `PlaybackQueue` containing canonical order, slot identity, revision, and observed active slot. In Bare mode the shell hosts this owner state; in Stay-alive and remote-control paths the daemon hosts it. Queue mutations enter this state through the same semantic owner operations before process-specific transport is considered.
 
-*Why:* this is the enabling deletion. Once no `PlayerCommand` variant that names
-a queue occurrence is serialized, `PlayerCommand` and `PlayerEvent` are
-in-process types and can carry `QueueSlotId` freely — no wire representation for
-slot ids, no capability negotiation, no version bump. `WireCommand`'s doc
-comment already promises that adding a `PlayerCommand` variant is a compile
-error until the conversions are updated; the exhaustive `From` impls make this
-deletion compiler-checked rather than grep-checked.
+A Client's `PlayerTab.queue` is a replaceable Bound-queue snapshot whenever another process owns playback. It does not predict mutation success. `PlaybackRun` receives owner-assigned slots as an execution sequence such as `Vec<(QueueSlotId, QueueItem)>`; it does not construct another canonical `PlaybackQueue`, allocate slot ids, or own a queue revision.
 
-*Alternative rejected:* add `slot_id` to the wire variants and gate on a new
-`unified-slot-commands` capability. That keeps a second, index-shaped queue
-protocol alive forever to serve a sender that does not exist, and contradicts
-the existing requirement that compatibility handling "SHALL NOT create a second
-internal queue model".
+*Why:* preserving three instances of the same domain type preserves three claims to authority. A smaller execution projection lets mpv keep the information it needs without inheriting canonical queue behavior.
 
-*Consequence:* a pre-unified peer loses remote queue mutation. That peer is
-already refused by `abs_queue_transport_rejection` for anything but Emby, and
-nothing in this repository is such a peer. The daemon arm for
-`WireCommand::QueueAppend` is deleted with it — that arm currently answers an
-append by re-submitting the entire queue as `SubmitQueue`, which restarts the
-playing track (audit finding 3). It is deleted rather than fixed.
+*Alternative rejected:* retain `PlaybackRun.queue` but construct it with owner ids. This fixes occurrence identity but leaves order, active position, and mutation outcome duplicated, which is the explicit non-goal of the previous design and the source of later reconciliation work.
 
-### D2: The Playback run adopts the owner's slot ids
+### D2: Existing mpv projection behavior remains unchanged
 
-`PlaybackRun` is constructed via `PlaybackQueue::from_slot_items`, and
-`PlayerCommand::SubmitQueue` / `QueueAppend` carry `(QueueSlotId, QueueItem)`
-pairs. `PlaybackRun` never calls `allocate_slot_id`.
+The execution projection may eagerly materialize the playable sequence or materialize only the active file for lifecycle-backed sources, exactly as today. It maps owner `QueueSlotId` values to mpv-local coordinates and resolves mpv observations back to slot identity before they leave the Playback run.
 
-*Why:* it is the smallest change that makes the two queues speak the same
-language, and it reuses a constructor that already exists for exactly this
-purpose.
+mpv playlist indices remain private adapter coordinates. Queue operations may resolve a slot to an mpv coordinate immediately before issuing an mpv command, but neither commands crossing into the Playback run nor events leaving it carry a bare queue index.
 
-*Consequence:* `on_playlist_pos_changed` still receives an mpv playlist index —
-that is genuinely an adapter coordinate, and mpv is the authority for it. It
-resolves that index against `PlaybackRun`'s own queue, which is legitimate
-(same-component resolution, per the spec's narrowed wording), and emits a slot
-id outward.
+*Why:* changing source loading is unnecessary. The defect is authority and correlation, not playlist playback.
 
-### D3: Reject stale addressing; delete the clamps
+### D3: Desired transition and observed playback are separate owner state
 
-`daemon_run.rs`'s `idx.min(queue.len() - 1)` and
-`src/app/player_event.rs`'s index resolution are replaced by slot lookup that
-returns `QueueMutationResult::NotFound`. `PlaybackQueue` already returns
-`NotFound` from every mutation; the callers currently discard it.
+The owner stores:
 
-*Why:* the clamp is the bug. A report for a slot that is gone carries no
-information about which slot should be active, so acting on it can only be
-wrong. `CommandRejected` already exists as the user-visible path
-(`src/app/player_event.rs` handles it), so rejection needs no new plumbing.
+```text
+observed_active_slot: Option<QueueSlotId>
+in_flight: Option<Transition>
+queued_latest: Option<Transition>
+```
 
-### D4: `cmd_replace_queue` is deleted, not refactored
+`Transition` reuses the existing `PlaybackRequestId` and `PlaybackGeneration` and carries its target `QueueSlotId`. Accepting a request changes desired transition state only. `observed_active_slot` changes only when a Playback-run event names an existing canonical slot.
 
-`PlayerCommand::ReplaceQueue` is removed; the daemon already translates it into
-`SubmitQueue` (`daemon_control.rs:177`). `cmd_submit_queue`,
-`replace_with_queue_items` and `accept_stopped_replacement` share one private
-`begin_queue(items, start_idx)` that owns the per-item reset:
-`begin_item_lifecycle`, `stop_report`, `load_state`,
-`pending_initial_playlist_layout`, the status projection, and the reporter
-restart.
+The Client renders observed playback from the owner snapshot. A pending target may be shown as starting, but it is never substituted for observed playback and never receives the previous slot's progress.
 
-*Why:* five copies of one lifecycle is why `stop_report` and `load_state` are
-set differently per call site. `cmd_load_new` (Standalone, single item, caller
-supplies the URL) keeps its own path — it is a different lifecycle, not a fifth
-copy of this one.
+*Why:* an intention is not evidence that mpv changed files. Keeping both values removes the need for `PlayheadProjection`, prediction reasons, and equality-based tick reconciliation.
 
-### D5: Consume moves to the owner, keyed off `TrackCompleted`
+*Alternative rejected:* continue optimistic activation and add an epoch. Epochs prevent stale confirmation but do not stop the UI and canonical queue from claiming an unobserved slot is playing.
 
-The consume decision (`should_consume_slot` policy + slot removal) is applied
-where the canonical queue lives. `src/app/player_event.rs` keeps the UI reaction
-(toasts, `on_audio_consumed` / `on_video_consumed`, feed lifecycle persistence)
-but stops mutating the queue when the owner is out of process.
+### D4: At most one transition is dispatched to the Playback run
 
-*Why:* today `TrackCompleted` has no handler in `crates/mbv-core/`, so a
-daemon-owned queue never consumes, and the Client's local removal is overwritten
-by the next `UnifiedQueueUpdated` broadcast. Same completion, two different
-outcomes depending on who is attached.
+When there is no in-flight transition, the owner dispatches the accepted request and records it as `in_flight`. While it remains in flight, a newer request replaces `queued_latest`; the replaced queued request receives `Superseded`. The owner does not send the queued request to mpv until the in-flight request settles or fails.
 
-*Consequence:* `pending_queue_removal`'s deferral (hold the removal until
-`TrackChanged` so the completed index still resolves) becomes unnecessary —
-under D2 the completed slot is named by identity, so removal can be immediate.
+A Playback-run transition event carries the dispatched request identity and observed slot. It can settle only the matching `in_flight` transition. After settlement, the owner dispatches `queued_latest`, if present. Natural advancement carries no request identity and cannot settle an explicit request unless the owner deliberately converts the matching observation into that request's result.
 
-### D6: One near-end rule via the existing helper
+*Why:* mpv does not echo application epochs. Sending several jumps and reconstructing causality from coalesced playlist events is inherently ambiguous, especially for A-to-B-to-A requests. One in-flight command makes correlation factual; one queued latest request provides explicit latest-wins behavior without an unbounded command backlog.
 
-The two inlined `last_valid_pos * 20 / runtime >= 19` copies
-(`player_run_events.rs:311`, `:586`) call `is_near_end` instead, with runtime
-taken from the completed occurrence.
+*Alternative rejected:* keep a queue of several dispatched transitions and match observations by target slot. Repeated targets make that matching ambiguous when mpv suppresses intermediate transitions.
 
-*Why:* the three copies currently disagree — one gates on `!completed_is_audio`,
-one on `has_session() && !is_audio`, and the two inlined ones read `runtime`
-from live status, which at a track boundary already describes the *next*
-occurrence. The helper is the intended rule; the copies are drift.
+### D5: One owner snapshot crosses every Client boundary
 
-The dead `natural_end` in the `reason == Quit` branch (`:307`) is removed in the
-same pass — it is `reason == Eof` inside a branch gated on `reason == Quit`.
+Extend the existing unified queue state into one snapshot containing:
+
+- canonical queue revision and ordered slots;
+- observed active slot;
+- playback active/paused/position/runtime state;
+- optional in-flight and queued-latest request summaries;
+- queue source.
+
+The owner builds and publishes the snapshot after each event-loop mutation. Ctrl connection, mutation, playback observation, transition outcome, and reconnect use the same shape. Bare mode feeds the same shape directly to its shell projection without serialization. A Client atomically replaces its previous Bound-queue snapshot and does not merge a separate `PlayerStatus.current_idx` into it.
+
+*Why:* stable identities still tear if queue and playback state arrive independently. One snapshot provides one revision boundary and removes shell-side reconciliation.
+
+*Alternative rejected:* preserve separate queue and status events with matching revision numbers. That requires buffering and joining two streams to recreate a snapshot the owner already had.
+
+### D6: Stale identity is rejected; it is never repaired by position
+
+Client commands naming absent slots use the existing command-rejection path and return the current owner snapshot. Playback-run reports naming absent slots are discarded and logged without a user-facing rejection. The daemon index clamp and every fallback from missing slot identity to current or neighbouring index are removed.
+
+Unused queue-addressing `WireCommand` variants are removed. Current Clients already use unified queue commands and playback intents, so the in-process `PlayerCommand` and `PlayerEvent` types can carry slot and transition identity without changing `CTRL_PROTOCOL_VERSION`.
+
+*Why:* a stale slot contains no evidence about which surviving slot was intended.
+
+### D7: Lifecycle and Consume follow owner identity
+
+The existing queue-start paths share one lifecycle initializer. Every completion path calls the existing near-end helper with the completed slot's own runtime. `TrackCompleted` names the completed slot, and the Player owner applies Consume before publishing its next snapshot. Client code retains presentation and Service-state reactions but does not mutate an out-of-process Bound queue.
+
+*Why:* these are existing duplicate decisions exposed by the authority change. Consolidating them prevents owner kinds from producing different queue outcomes.
 
 ## Risks / Trade-offs
 
-- **A pre-unified ctrl peer loses queue mutation (D1).** → No such peer exists in
-  this repository, and the affected variants have no in-repo sender. If one
-  appears, it reaches queue mutation through `UnifiedQueue*`, which is the path
-  every current Client already uses.
-- **Rejection is louder than clamping: races that silently "worked" now surface
-  as rejected commands.** → That is the intent, but a chatty rejection toast
-  would be a regression in feel. Rejections caused by the owner's own reports
-  (D3, second scenario) are discarded silently; only Client-initiated mutations
-  surface. Watch the queue-mutation-under-playback tests for new rejections that
-  indicate an over-eager reject rather than a real race.
-- **Moving Consume (D5) changes which process removes slots, and consume policy
-  reads client config (`consume_videos` / `consume_audio`).** → The policy input
-  must reach the owner. It already does for the in-process owner; for a daemon
-  owner the policy travels with the submission rather than being re-decided per
-  completion. This is the one place where the change is not pure subtraction —
-  sequence it last, after identity is in place, so a failure there does not
-  block the rest.
-- **`PlaybackRun` no longer allocating ids means a bug that duplicates an id
-  upstream now corrupts the run's queue too.** → `from_slot_items` derives
-  `next_slot_id` from the maximum incoming id, so locally appended slots cannot
-  collide with adopted ones.
+- **Serializing transitions can delay the newest request until mpv reports the in-flight transition.** -> Keep the in-flight timeout bounded; on timeout reject that transition, rebuild the execution projection from canonical owner state, then dispatch the latest queued request.
+- **Atomic snapshots are larger than separate status events.** -> Publish immediately on structural and transition changes; retain the existing lightweight cadence for position-only updates if measurement shows snapshot traffic matters, but position updates must name the same observed slot and queue revision.
+- **Bare mode currently combines Client and owner responsibilities in the shell.** -> Centralize owner mutation and transition state first, then make the shell consume its snapshot; do not build a second transport abstraction for the in-process path.
+- **Removing PlaybackRun's `PlaybackQueue` may expose helper methods coupled to that type.** -> Move only owner semantics out; retain small local functions for slot-to-mpv-coordinate lookup rather than introducing another queue model.
+- **Cross-version peers may still send removed wire variants.** -> Reject them at the ctrl compatibility boundary; do not translate them back into index-addressed internal commands.
 
 ## Migration Plan
 
-No data migration: slot ids are runtime-only and `QueueState` is untouched.
-Deployment is a single build — the daemon and TUI cross-version only through
-ctrl, and the removed variants have no sender. Rollback is a revert; nothing
-persisted changes shape.
+1. Add the owner snapshot and transition fields while existing readers still compile.
+2. Change source-of-truth command and event types to slot and transition identity, then update Playback-run emitters.
+3. Route owner mutation and serialized transition dispatch through the shared owner state for all owner kinds.
+4. Switch Clients to atomic snapshot adoption and remove optimistic playhead reconciliation.
+5. Remove the Playback-run canonical queue, index clamps, duplicate lifecycle paths, and Client-side Consume.
 
-Sequencing is chosen so each step is independently revertible and the risky step
-is last: deletions (D1, D6 and the dead condition) → identity threading (D2) →
-rejection (D3) → lifecycle collapse (D4) → Consume relocation (D5).
+No persisted data migration is required. Runtime ids remain ephemeral. Rollback is a code revert; no on-disk shape changes.
