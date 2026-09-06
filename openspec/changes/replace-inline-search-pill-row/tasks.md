@@ -1,6 +1,6 @@
 ## 1. Shared Inline Search Presentation
 
-- [ ] 1.1 Replace the three-row bordered input arrangement with a shared one-row search presentation that accepts the destination's canonical pill and result rectangles; update the existing Inline Search renderer test to prove the bar occupies one row, no border is painted, and published result geometry equals the supplied content rectangle.
+- [x] 1.1 Replace the three-row bordered input arrangement with a shared one-row search presentation that accepts the destination's canonical pill and result rectangles; update the existing Inline Search renderer test to prove the bar occupies one row, no border is painted, and published result geometry equals the supplied content rectangle.
 
 ## 2. Destination Composition
 
