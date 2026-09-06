@@ -4,6 +4,27 @@ use super::super::inline_search::InlineSearchAction;
 use super::{Msg, Pane, ShellRequest, TvWorkspaceComponent};
 
 impl TvWorkspaceComponent {
+    /// Ctrl+P/S/A on the selected Inline Search result reuse the ordinary
+    /// library result-row effects, resolved against the search cursor (result-
+    /// row shortcut actions stay available while search is open).
+    fn inline_search_result_action(&self, key: &tuirealm::event::KeyEvent) -> Option<Msg> {
+        if !self.context.focused
+            || !key
+                .modifiers
+                .contains(tuirealm::event::KeyModifiers::CONTROL)
+        {
+            return None;
+        }
+        let item = self.inline_search.selected_item()?;
+        let request = match key.code {
+            Key::Char('p') => ShellRequest::EmbyLibraryPlay { item },
+            Key::Char('s') => ShellRequest::EmbyLibraryShuffle { item },
+            Key::Char('a') => ShellRequest::EmbyLibraryEnqueue { item },
+            _ => return None,
+        };
+        Some(Msg::Shell(request))
+    }
+
     pub(super) fn handle_key(&mut self, key: &tuirealm::event::KeyEvent) -> Option<Msg> {
         // Inline Search gets first refusal while active (design.md D4): the
         // component returns immediately after delegating, even when search
@@ -22,7 +43,9 @@ impl TvWorkspaceComponent {
                     self.inline_search.close();
                     None
                 }
-                None => None,
+                // Ctrl+P/S/A that the shared control does not consume act on
+                // the selected result row via the ordinary result-row effects.
+                None => self.inline_search_result_action(key),
             };
         }
         if !self.context.focused {

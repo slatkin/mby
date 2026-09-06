@@ -10,8 +10,9 @@ use tuirealm::event::{
 };
 
 use crate::app::components::msg::{ConfirmIntent, PlaybackRequest, ServiceRequest};
+use crate::app::components::inline_search::InlineSearchHost;
 use crate::app::components::{
-    ComponentId, ModalId, Msg, MusicWorkspaceComponent, OverlayId, QueueRequest,
+    ComponentId, ModalId, Msg, MusicWorkspaceComponent, OverlayId, QueueRequest, SearchPool,
     SearchSidebarComponent, ShellRequest, TerminalObserverEvent, UserEvent,
 };
 use crate::app::router::RouterOutcome;
@@ -389,6 +390,52 @@ fn music_library_queue_library_round_trip_keeps_focus_and_pane_state() {
         music_track_cursor(&harness, &id),
         Some(0),
         "Music navigates immediately once Library focus returns"
+    );
+}
+
+/// Ctrl+A on a selected Inline Search result reaches the focused destination
+/// through a real `Application::tick()`: the text-entry router gate lets the
+/// chord fall through to the workspace, which enqueues the selected result row
+/// rather than the ordinary album cursor.
+#[test]
+fn ctrl_a_on_inline_search_result_enqueues_that_result_through_live_tick() {
+    let (mut harness, id) = wide_music_harness();
+
+    // Open Inline Search from the focused Music workspace.
+    harness.inject(key(Key::Char('/')));
+    harness.step();
+    assert!(harness.model().active_inline_search_is_open());
+
+    // Seed a known result row (the shell content push would otherwise supply
+    // the library's own albums); the cursor rests on it.
+    {
+        let workspace = harness
+            .model_mut()
+            .application
+            .get_component_mut(&id)
+            .expect("Music workspace mounted")
+            .as_any_mut()
+            .downcast_mut::<MusicWorkspaceComponent>()
+            .expect("Music workspace type");
+        let mut result = crate::app::tests::make_item("Result Album", "MusicAlbum");
+        result.id = "result-album".into();
+        workspace
+            .inline_search_mut()
+            .set_pool(SearchPool::Items(vec![result]));
+    }
+
+    harness.inject(Event::Keyboard(KeyEvent {
+        code: Key::Char('a'),
+        modifiers: KeyModifiers::CONTROL,
+    }));
+    let outcome = harness.step();
+    assert!(
+        outcome.messages.iter().any(|msg| matches!(
+            msg,
+            Msg::Shell(ShellRequest::EmbyLibraryEnqueue { item }) if item.id == "result-album"
+        )),
+        "Ctrl+A acts on the selected Inline Search result: {:?}",
+        outcome.messages
     );
 }
 
