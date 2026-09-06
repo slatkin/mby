@@ -241,21 +241,13 @@ impl SessionReporter {
     // Returns false (no-op) when the reporter has no session so callers get the
     // correct StopReport state without needing per-site guards.
     fn report_stopped(&self, last_valid_pos: i64) -> bool {
-        if !self.has_session() {
+        let Some(d) = self.stopped_report_data(last_valid_pos) else {
             return false;
-        }
-        let (id, msid, sid) = self.ids.lock().unwrap_or_else(|e| e.into_inner()).clone();
-        let is_audio = self.is_audio.load(Ordering::Relaxed);
-        let pos = if is_audio { 0 } else { last_valid_pos };
-        let runtime_ticks = self
-            .status
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .runtime_ticks;
-        log::info!(target: "player", "report_stopped: item={id} is_audio={is_audio} last_valid_pos={}s sending pos={}s",
-            last_valid_pos / TICKS_PER_SECOND, pos / TICKS_PER_SECOND);
+        };
+        log::info!(target: "player", "report_stopped: item={} is_audio={} last_valid_pos={}s sending pos={}s",
+            d.id, d.is_audio, d.last_valid_pos / TICKS_PER_SECOND, d.pos / TICKS_PER_SECOND);
         self.client
-            .report_stopped(&id, &msid, pos, &sid, runtime_ticks)
+            .report_stopped(&d.id, &d.msid, d.pos, &d.sid, d.runtime_ticks)
     }
 
     // Fire-and-forget variant of report_stopped for the item being left behind
@@ -289,26 +281,18 @@ impl SessionReporter {
     }
 
     fn report_stopped_for_shutdown(&self, last_valid_pos: i64, timeout: Duration) -> bool {
-        if !self.has_session() {
+        let Some(d) = self.stopped_report_data(last_valid_pos) else {
             return false;
-        }
-        let (id, msid, sid) = self.ids.lock().unwrap_or_else(|e| e.into_inner()).clone();
-        let is_audio = self.is_audio.load(Ordering::Relaxed);
-        let pos = if is_audio { 0 } else { last_valid_pos };
-        let runtime_ticks = self
-            .status
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .runtime_ticks;
+        };
         if let Some(ref tx) = self.ws_tx {
             if tx.is_connected() {
                 let _ = tx.flush(timeout.min(Duration::from_secs(1)));
             }
         }
-        log::info!(target: "player", "report_stopped shutdown: item={id} is_audio={is_audio} last_valid_pos={}s sending pos={}s timeout={}ms",
-            last_valid_pos / TICKS_PER_SECOND, pos / TICKS_PER_SECOND, timeout.as_millis());
+        log::info!(target: "player", "report_stopped shutdown: item={} is_audio={} last_valid_pos={}s sending pos={}s timeout={}ms",
+            d.id, d.is_audio, d.last_valid_pos / TICKS_PER_SECOND, d.pos / TICKS_PER_SECOND, timeout.as_millis());
         self.client
-            .report_stopped_for_shutdown(&id, &msid, pos, &sid, runtime_ticks, timeout)
+            .report_stopped_for_shutdown(&d.id, &d.msid, d.pos, &d.sid, d.runtime_ticks, timeout)
     }
 
     fn report_ping(&self) {
