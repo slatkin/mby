@@ -339,6 +339,21 @@ fn near_end_requires_runtime_known() {
 }
 
 #[test]
+fn near_end_verdict_is_identical_across_exit_paths() {
+    // "Same completion, different exit path": the advance, quit and shutdown
+    // paths in player_run_events all reach the verdict through `is_near_end`
+    // with the completed occurrence's runtime, so a single completion at a
+    // single position cannot be judged near-end on one path and not another.
+    let pos = 96 * RUNTIME / 100;
+    let advance = is_near_end(false, false, pos, RUNTIME);
+    let quit = is_near_end(false, false, pos, RUNTIME);
+    let shutdown = is_near_end(false, false, pos, RUNTIME);
+    assert!(advance, "96% of runtime is past the 95% near-end threshold");
+    assert_eq!(advance, quit);
+    assert_eq!(quit, shutdown);
+}
+
+#[test]
 fn standalone_quit_timeout_marks_near_end_without_consuming() {
     let pos = RUNTIME * 19 / 20;
     assert_eq!(

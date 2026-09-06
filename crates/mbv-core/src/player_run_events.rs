@@ -304,19 +304,21 @@ impl PlaybackRun {
         let runtime = self.status.lock().unwrap().runtime_ticks;
 
         if self.origin == PlaybackOrigin::Queue && reason == mpv_end_file_reason::Quit {
-            let natural_end = reason == mpv_end_file_reason::Eof && runtime > 0;
-            let near_end = !natural_end
-                && !completed_is_audio
-                && runtime > 0
-                && self.last_valid_pos * 20 / runtime >= 19;
+            let completed_runtime = self.active_item().map_or(0, |item| item.runtime_ticks());
+            let near_end = is_near_end(
+                completed_is_audio,
+                false,
+                self.last_valid_pos,
+                completed_runtime,
+            );
             log::warn!(target: "player", "quit path: last_valid_pos={} runtime={} stop_report={:?}",
-                self.last_valid_pos, runtime, self.stop_report);
+                self.last_valid_pos, completed_runtime, self.stop_report);
             if self.stop_report == StopReport::NotSent {
                 // mpv-initiated quits (for example a compositor close request)
                 // must not wait on Emby before mpv can finish its own shutdown.
                 self.report_stop_now_or_background(progress);
             }
-            if (natural_end || near_end) && !completed_is_audio && self.reporter.has_session() {
+            if near_end && !completed_is_audio && self.reporter.has_session() {
                 let id = self.reporter.ids.lock().unwrap().0.clone();
                 if let Err(e) = self.reporter.client.mark_played(id.as_str()) {
                     log::warn!(target: "player", "mark_played failed id={id}: {e}; scheduling retry");
@@ -578,12 +580,10 @@ impl PlaybackRun {
             if let Some(mid) = self.mark_played_id.take() {
                 retry_mark_played(client.clone(), mid);
             }
-            let runtime = self.status.lock().unwrap().runtime_ticks;
+            let completed_runtime = self.active_item().map_or(0, |item| item.runtime_ticks());
             let is_audio = self.reporter.is_audio.load(Ordering::Relaxed);
             let near_end = self.reporter.has_session()
-                && !is_audio
-                && runtime > 0
-                && self.last_valid_pos * 20 / runtime >= 19;
+                && is_near_end(is_audio, false, self.last_valid_pos, completed_runtime);
             if near_end {
                 let id = self.reporter.ids.lock().unwrap().0.clone();
                 retry_mark_played(client.clone(), id);
