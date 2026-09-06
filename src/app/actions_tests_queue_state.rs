@@ -1,6 +1,8 @@
 use super::*;
 use crate::app::tests::make_item;
-use mbv_core::playback_queue::{AudiobookshelfQueueItem, FeedEntry, QueueItemContentId};
+use mbv_core::playback_queue::{
+    AudiobookshelfBookQueueItem, AudiobookshelfQueueItem, FeedEntry, QueueItem, QueueItemContentId,
+};
 
 use crate::config::tests::SYS_ENV_LOCK as XDG_HOME_LOCK;
 
@@ -37,6 +39,149 @@ fn make_queue_items(n: usize) -> Vec<mbv_core::playback_queue::QueueItem> {
         .into_iter()
         .map(|i| mbv_core::playback_queue::QueueItem::Emby(Box::new(i)))
         .collect()
+}
+
+fn mixed_audiobookshelf_queue() -> Vec<QueueItem> {
+    vec![
+        QueueItem::Emby(Box::new(make_item("Emby", "Movie"))),
+        QueueItem::Feed(FeedEntry {
+            guid: "feed-entry".into(),
+            title: "Feed entry".into(),
+            enclosure_url: Some("https://example.test/feed.mp3".into()),
+            link: None,
+            mime_type: Some("audio/mpeg".into()),
+            duration_ticks: Some(100),
+            pub_date_secs: None,
+            feed_kind: None,
+            feed_id: None,
+            position_ticks: 0,
+            played: false,
+        }),
+        QueueItem::Audiobookshelf(AudiobookshelfQueueItem {
+            library_item_id: "show-1".into(),
+            episode_id: "episode-1".into(),
+            title: "Episode 1".into(),
+            show_title: None,
+            author: None,
+            description: None,
+            duration_ticks: Some(100),
+            position_ticks: 42,
+            played: false,
+            pub_date_secs: None,
+            is_finished: false,
+            cover_path: None,
+        }),
+        QueueItem::AudiobookshelfBook(AudiobookshelfBookQueueItem {
+            library_item_id: "book-1".into(),
+            title: "Book 1".into(),
+            author: None,
+            duration_ticks: Some(200),
+            position_ticks: 84,
+            played: false,
+            is_finished: false,
+            cover_path: None,
+        }),
+    ]
+}
+
+fn assert_audiobookshelf_queue_purged(items: &[QueueItem]) {
+    assert_eq!(items.len(), 2);
+    assert!(matches!(&items[0], QueueItem::Emby(item) if item.name == "Emby"));
+    assert!(matches!(&items[1], QueueItem::Feed(item) if item.guid == "feed-entry"));
+    assert!(items.iter().all(|item| !item.is_audiobookshelf_any()));
+}
+
+#[test]
+fn audiobookshelf_service_removal_and_replacement_purge_all_queue_projections() {
+    let _g = XDG_HOME_LOCK.lock().unwrap();
+    let _xdg = XdgHomeGuard::new();
+    let mixed = mixed_audiobookshelf_queue();
+    let mut app = crate::app::tests::make_app_stub();
+    app.config.lock().unwrap().audiobookshelf_setup = Some(
+        mbv_core::config::AudiobookshelfSetup::new("https://old-books.example"),
+    );
+    mbv_core::config::save_service_secret(
+        mbv_core::config::ServiceKind::Audiobookshelf,
+        "old-secret",
+    )
+    .unwrap();
+    app.player_tab.set_queue_items(mixed.clone(), 2);
+    app.remote_player_tab = Some(crate::app::types_player_tab::PlayerTab::new(
+        mixed.clone(),
+        3,
+    ));
+    mbv_core::config::save_queue_state(&mbv_core::config::QueueState {
+        source: crate::config::QueueSource::Unknown,
+        items: mixed.clone(),
+        cursor: 3,
+        last_played_content_id: None,
+        last_played_item_id: None,
+        last_played_completed: false,
+        positions: Default::default(),
+    })
+    .unwrap();
+
+    // A cold local queue is Composed; the remote tab is the remote Bound view.
+    app.remove_audiobookshelf_confirmed();
+
+    assert_audiobookshelf_queue_purged(&app.player_tab.all_queue_items());
+    assert_audiobookshelf_queue_purged(&app.remote_player_tab.as_ref().unwrap().all_queue_items());
+    assert_audiobookshelf_queue_purged(&mbv_core::config::load_queue_state().unwrap().items);
+
+    // Refill the projections and make the local slot active: this is the
+    // local Bound replacement path, while remote_player_tab remains remote Bound.
+    let mixed = mixed_audiobookshelf_queue();
+    app.config.lock().unwrap().audiobookshelf_setup = Some(
+        mbv_core::config::AudiobookshelfSetup::new("https://replacement-books.example"),
+    );
+    mbv_core::config::save_service_secret(
+        mbv_core::config::ServiceKind::Audiobookshelf,
+        "replacement-secret",
+    )
+    .unwrap();
+    app.player_tab.set_queue_items(mixed.clone(), 2);
+    let active_slot = app.player_tab.slot_id_at(2).unwrap();
+    assert!(matches!(
+        app.player_tab.queue.set_active_slot(active_slot),
+        mbv_core::playback_queue::QueueMutationResult::Applied(())
+    ));
+    app.player.status.lock().unwrap().active = true;
+    app.remote_player_tab = Some(crate::app::types_player_tab::PlayerTab::new(
+        mixed.clone(),
+        3,
+    ));
+    mbv_core::config::save_queue_state(&mbv_core::config::QueueState {
+        source: crate::config::QueueSource::Unknown,
+        items: mixed,
+        cursor: 3,
+        last_played_content_id: None,
+        last_played_item_id: None,
+        last_played_completed: false,
+        positions: Default::default(),
+    })
+    .unwrap();
+    let generation = app.audiobookshelf_runtime.generation();
+    app.pending_audiobookshelf_replacement = Some(
+        crate::app::service_startup::AudiobookshelfPendingReplacement {
+            candidate: crate::app::service_startup::AudiobookshelfValidatedCandidate {
+                setup: mbv_core::config::AudiobookshelfSetup::new(
+                    "https://replacement-books.example",
+                ),
+                user: mbv_core::audiobookshelf::AudiobookshelfUser {
+                    id: "reader-id".into(),
+                    username: "reader".into(),
+                },
+                api_key: "replacement-secret".into(),
+            },
+            previous_state: mbv_core::service_runtime::ServiceState::Ready,
+        },
+    );
+
+    app.replace_audiobookshelf_confirmed(generation);
+
+    assert_audiobookshelf_queue_purged(&app.player_tab.all_queue_items());
+    assert_audiobookshelf_queue_purged(&app.remote_player_tab.as_ref().unwrap().all_queue_items());
+    assert_audiobookshelf_queue_purged(&mbv_core::config::load_queue_state().unwrap().items);
 }
 
 #[test]

@@ -195,6 +195,19 @@ fn audiobookshelf_item() -> QueueItem {
     })
 }
 
+fn audiobookshelf_book_item() -> QueueItem {
+    QueueItem::AudiobookshelfBook(crate::playback_queue::AudiobookshelfBookQueueItem {
+        library_item_id: "book-1".into(),
+        title: "Book 1".into(),
+        author: None,
+        duration_ticks: Some(100),
+        position_ticks: 0,
+        played: false,
+        is_finished: false,
+        cover_path: None,
+    })
+}
+
 fn audiobookshelf_context() -> AudiobookshelfPlayerContext {
     AudiobookshelfPlayerContext::new(
         crate::service_runtime::SetupGeneration::new(7),
@@ -431,5 +444,7 @@ fn context_loss_rejects_audiobookshelf_without_mutating_bound_submission() {
 
     assert!(!player.can_admit_audiobookshelf());
     assert!(!player.submit_queue(vec![audiobookshelf_item()], 0, None, false, 100));
+    // Book-shaped items hit the same combined-classification refusal.
+    assert!(!player.submit_queue(vec![audiobookshelf_book_item()], 0, None, false, 100));
     assert!(commands.try_recv().is_err());
 }

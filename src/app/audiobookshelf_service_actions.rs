@@ -1,7 +1,6 @@
 use super::notify_actions::ToastSeverity;
 use super::App;
 use mbv_core::config::QueueState;
-use mbv_core::playback_queue::QueueItem;
 use mbv_core::service_runtime::ServiceState;
 
 impl App {
@@ -41,7 +40,7 @@ impl App {
             .playback_queue()
             .queue
             .active_slot()
-            .is_some_and(|slot| matches!(slot.item, QueueItem::Audiobookshelf(_)));
+            .is_some_and(|slot| slot.item.is_audiobookshelf_any());
         if active_is_audiobookshelf {
             self.player.stop();
         }
@@ -158,7 +157,7 @@ impl App {
             .playback_queue()
             .queue
             .active_slot()
-            .is_some_and(|slot| matches!(slot.item, QueueItem::Audiobookshelf(_)));
+            .is_some_and(|slot| slot.item.is_audiobookshelf_any());
         if active_is_abs {
             self.player.stop();
         }
@@ -172,7 +171,7 @@ impl App {
             let kept = queue
                 .all_queue_items()
                 .into_iter()
-                .filter(|item| !matches!(item, QueueItem::Audiobookshelf(_)))
+                .filter(|item| !item.is_audiobookshelf_any())
                 .collect::<Vec<_>>();
             let new_cursor = cursor_before.min(kept.len().saturating_sub(1));
             queue.set_queue_items(kept, new_cursor);

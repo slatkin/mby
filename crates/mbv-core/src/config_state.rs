@@ -266,13 +266,11 @@ impl QueueState {
         self.without_items(|item| !matches!(item, crate::playback_queue::QueueItem::Emby(_)))
     }
 
-    /// Remove only Audiobookshelf slots and their keyed positions. Emby and
-    /// Feed items remain intact. Used on confirmed Audiobookshelf Service
-    /// replacement/removal to purge Service-owned queue state without
-    /// affecting other Services.
+    /// Remove only Audiobookshelf slots (both episode and book shapes) and
+    /// their keyed positions. Emby and Feed items remain intact. Used on
+    /// confirmed Audiobookshelf Service replacement/removal to purge
+    /// Service-owned queue state without affecting other Services.
     pub fn without_audiobookshelf(&self) -> Self {
-        self.without_items(|item| {
-            !matches!(item, crate::playback_queue::QueueItem::Audiobookshelf(_))
-        })
+        self.without_items(|item| !item.is_audiobookshelf_any())
     }
 }

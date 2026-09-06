@@ -255,6 +255,7 @@ fn ordinary_stop_marks_stop_report_accepted_not_sent() {
 #[test]
 fn abs_natural_eof_uses_runtime_without_changing_generic_audio_reporting() {
     let abs = abs_item();
+    let abs_book = abs_book_item();
     let emby_audio = QueueItem::Emby(Box::new(make_media_item("audio")));
     let runtime = 90_000;
     let actual = 12_000;
@@ -265,6 +266,17 @@ fn abs_natural_eof_uses_runtime_without_changing_generic_audio_reporting() {
     );
     assert_eq!(
         provider_lifecycle_close_pos(&abs, false, runtime, actual),
+        actual
+    );
+    // Task 2.3: books share the combined classification — a naturally
+    // completed book closes at runtime; a non-natural stop keeps the
+    // last valid position.
+    assert_eq!(
+        provider_lifecycle_close_pos(&abs_book, true, runtime, actual),
+        runtime
+    );
+    assert_eq!(
+        provider_lifecycle_close_pos(&abs_book, false, runtime, actual),
         actual
     );
     assert_eq!(

@@ -358,7 +358,7 @@ impl Player {
         initial_volume: u8,
     ) -> bool {
         if items.is_empty()
-            || (items.iter().any(QueueItem::is_audiobookshelf) && !self.can_admit_audiobookshelf())
+            || (items.iter().any(QueueItem::is_audiobookshelf_any) && !self.can_admit_audiobookshelf())
         {
             return false;
         }
@@ -470,7 +470,7 @@ impl Player {
             };
             init_volume(&mpv, &status, initial_volume);
 
-            let active_file_projection = items.iter().any(QueueItem::is_audiobookshelf);
+            let active_file_projection = items.iter().any(QueueItem::is_audiobookshelf_any);
             let load_indices: Vec<_> = if active_file_projection {
                 vec![start_idx]
             } else {
@@ -636,7 +636,7 @@ impl Player {
 
     pub fn queue_append(&self, items: Vec<QueueItem>) -> bool {
         if items.is_empty()
-            || (items.iter().any(QueueItem::is_audiobookshelf) && !self.can_admit_audiobookshelf())
+            || (items.iter().any(QueueItem::is_audiobookshelf_any) && !self.can_admit_audiobookshelf())
         {
             return false;
         }
