@@ -18,6 +18,6 @@
 
 ## 4. Verify the change
 
-- [ ] 4.1 Run `cargo check -p mbv-core && cargo nextest run -p mbv-core` and fix every failure related to queue classification, owner admission, projection, lifecycle, or teardown.
-- [ ] 4.2 Run `cargo check -p mbv && cargo nextest run -p mbv` to verify interactive-process teardown and queue adoption remain correct.
-- [ ] 4.3 Run `cargo clippy --workspace --all-targets && cargo fmt --all -- --check && ast-grep scan && make check-code-file-lines`, then confirm the diff contains no wire-format, persisted-format, queue-revision, `pending_sync`, Consume-ownership, or queue-start-lifecycle changes.
+- [x] 4.1 Run `cargo check -p mbv-core && cargo nextest run -p mbv-core` and fix every failure related to queue classification, owner admission, projection, lifecycle, or teardown.
+- [x] 4.2 Run `cargo check -p mbv && cargo nextest run -p mbv` to verify interactive-process teardown and queue adoption remain correct.
+- [x] 4.3 Run `cargo clippy --workspace --all-targets && cargo fmt --all -- --check && ast-grep scan && make check-code-file-lines`, then confirm the diff contains no wire-format, persisted-format, queue-revision, `pending_sync`, Consume-ownership, or queue-start-lifecycle changes.
