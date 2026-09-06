@@ -15,6 +15,7 @@ runs Bare, via Local daemon (Stay-alive), or packaged `mbvd` Player owner.
   code; sync applied deltas into `openspec/specs/`; archive when done.
 * Change source-of-truth types before callers; ask only about material
   design/product choices.
+* Commit or undo your changs; never leave a dirty worktree.
 
 ## Repository map
 
