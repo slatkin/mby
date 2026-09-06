@@ -311,12 +311,6 @@ impl PlaybackQueue {
             .any(|s| !matches!(s.item, QueueItem::Emby(_)))
     }
 
-    /// Helper for owner admission and service cleanup: whether a slot is
-    /// Audiobookshelf-owned.
-    pub fn is_audiobookshelf_slot(slot: &QueueSlot) -> bool {
-        matches!(slot.item, QueueItem::Audiobookshelf(_))
-    }
-
     pub fn clear_active_slot(&mut self) {
         self.active_slot_id = None;
     }
@@ -492,9 +486,10 @@ impl PlaybackQueue {
         let active_slot_id = self.active_slot_id;
 
         for mut slot in old_slots {
-            // Feed and Audiobookshelf slots have no Emby server counterpart;
-            // keep them as-is (group_fetched_items_by_item_id is Emby-only).
-            if matches!(slot.item, QueueItem::Feed(_) | QueueItem::Audiobookshelf(_)) {
+            // Feed and Audiobookshelf slots (both episode and book shapes)
+            // have no Emby server counterpart; keep them as-is
+            // (group_fetched_items_by_item_id is Emby-only).
+            if matches!(slot.item, QueueItem::Feed(_)) || slot.item.is_audiobookshelf_any() {
                 if should_protect_missing_slot(&slot, active_slot_id) {
                     result.protected_slots.push(slot.slot_id);
                 }

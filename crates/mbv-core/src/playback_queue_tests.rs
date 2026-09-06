@@ -53,6 +53,19 @@ fn audiobookshelf_episode(library_item_id: &str, episode_id: &str) -> Audiobooks
     }
 }
 
+fn audiobookshelf_book(library_item_id: &str) -> AudiobookshelfBookQueueItem {
+    AudiobookshelfBookQueueItem {
+        library_item_id: library_item_id.into(),
+        title: "ABS book".into(),
+        author: Some("Author".into()),
+        duration_ticks: Some(3600 * TICKS_PER_SECOND as u64),
+        position_ticks: 900 * TICKS_PER_SECOND,
+        played: false,
+        is_finished: false,
+        cover_path: Some("/covers/book.jpg".into()),
+    }
+}
+
 fn item_with_progress(id: &str, position_seconds: i64, played: bool) -> EmbyItem {
     let mut item = item(id);
     item.playback_position_ticks = position_seconds * TICKS_PER_SECOND;
@@ -592,6 +605,48 @@ fn audiobookshelf_identity_and_mixed_queue_round_trip_are_typed() {
 }
 
 #[test]
+fn refresh_preserves_inactive_audiobookshelf_book_slot() {
+    // Both Audiobookshelf queue-item shapes (episode + book) must survive an
+    // Emby-only refresh untouched, retaining slot, order, and progress state.
+    let mut queue = PlaybackQueue::from_queue_items(
+        vec![
+            QueueItem::Emby(Box::new(item("emby-1"))),
+            QueueItem::Feed(feed("feed-1")),
+        ],
+        Some(0),
+    );
+    let episode_slot = queue.append(QueueItem::Audiobookshelf(audiobookshelf_episode(
+        "library-a",
+        "episode-1",
+    )));
+    let book_slot = queue.append(QueueItem::AudiobookshelfBook(audiobookshelf_book(
+        "library-book-1",
+    )));
+    let ids = slot_ids(&queue);
+
+    let result = queue.merge_refresh(vec![item_with_progress("emby-1", 7, false)]);
+
+    assert!(result.pruned_slots.is_empty());
+    assert_eq!(slot_ids(&queue), ids);
+    assert!(matches!(
+        queue.slot(episode_slot).unwrap().item,
+        QueueItem::Audiobookshelf(_)
+    ));
+    assert!(matches!(
+        queue.slot(book_slot).unwrap().item,
+        QueueItem::AudiobookshelfBook(ref book) if book.position_ticks == 900 * TICKS_PER_SECOND
+    ));
+    assert_eq!(
+        queue
+            .slot(episode_slot)
+            .unwrap()
+            .item
+            .playback_position_ticks(),
+        30 * TICKS_PER_SECOND
+    );
+}
+
+#[test]
 fn audiobookshelf_admission_and_purge_keep_other_kinds() {
     let abs = QueueItem::Audiobookshelf(audiobookshelf_episode("library-a", "episode-1"));
     assert!(!abs.admissible_for_owner(false, |_| true));
@@ -603,6 +658,7 @@ fn audiobookshelf_admission_and_purge_keep_other_kinds() {
         items: vec![
             QueueItem::Emby(Box::new(item("emby-1"))),
             abs,
+            QueueItem::AudiobookshelfBook(audiobookshelf_book("library-book-1")),
             QueueItem::Feed(feed("feed-1")),
         ],
         cursor: 1,
@@ -613,7 +669,10 @@ fn audiobookshelf_admission_and_purge_keep_other_kinds() {
     };
     let filtered = state.without_audiobookshelf();
     assert_eq!(filtered.items.len(), 2);
-    assert!(filtered.items.iter().all(|item| !item.is_audiobookshelf()));
+    assert!(filtered
+        .items
+        .iter()
+        .all(|item| !item.is_audiobookshelf_any()));
     assert!(filtered.items.iter().any(QueueItem::is_emby));
     assert!(filtered.items.iter().any(QueueItem::is_feed));
 }
