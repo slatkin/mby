@@ -1,7 +1,7 @@
 ## 1. Headless cache budget
 
-- [ ] 1.1 In `crates/mbv-core/src/player_runtime.rs`, remove `demuxer-max-bytes` and `demuxer-max-back-bytes` from the `Mpv::with_initializer` option block and set both explicitly after init: `50M`/`100M` when `config.headless` is false, `10M`/`10M` when it is true. Both branches must set both properties so a user `mpv.conf` cannot supply either. Verify `cargo check -p mbv-core` passes.
-- [ ] 1.2 Extend the existing `#656` headless-init test in `crates/mbv-core/src/player_tests_submit.rs` (the one asserting `audio-display == "no"`) to also assert `demuxer-max-bytes` and `demuxer-max-back-bytes` read back as the headless values, and add the non-headless counterpart asserting `50M`/`100M`. Verify with `cargo nextest run -p mbv-core player_tests_submit`.
+- [x] 1.1 In `crates/mbv-core/src/player_runtime.rs`, remove `demuxer-max-bytes` and `demuxer-max-back-bytes` from the `Mpv::with_initializer` option block and set both explicitly after init: `50M`/`100M` when `config.headless` is false, `10M`/`10M` when it is true. Both branches must set both properties so a user `mpv.conf` cannot supply either. Verify `cargo check -p mbv-core` passes.
+- [x] 1.2 Extend the existing `#656` headless-init test in `crates/mbv-core/src/player_tests_submit.rs` (the one asserting `audio-display == "no"`) to also assert `demuxer-max-bytes` and `demuxer-max-back-bytes` read back as the headless values, and add the non-headless counterpart asserting `50M`/`100M`. Verify with `cargo nextest run -p mbv-core player_tests_submit`.
 
 ## 2. Single reporter worker
 
