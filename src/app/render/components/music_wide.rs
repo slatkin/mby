@@ -1,15 +1,15 @@
-//! Grouped Music's wide hero-on-left component.
+//! Grouped Music's wide Wide hero component.
 
 use crate::app::components::inline_search::InlineSearch;
 use crate::app::components::media_list::{
     InlineMediaBrowser, MediaKind, MediaListRow, MediaSemanticState, WideMediaList,
 };
 use crate::app::layout::LayoutMain;
-use crate::app::render::arrangements::hero_left::{self, WrappedHeroLine, PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::arrangements::library as library_arrangement;
 use crate::app::render::arrangements::library::selected_detail_content_area;
 use crate::app::render::arrangements::music::{self as music_arrangement, WideMusicLeftLayout};
 use crate::app::render::arrangements::padded_rect;
+use crate::app::render::arrangements::wide_hero::{self, WrappedHeroLine, PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::components::album_detail::album_hero_detail_rows;
 use crate::app::render::components::detail_series_view::{SERIES_IMAGE_COLS, SERIES_IMAGE_ROWS};
 use crate::app::render::components::hero::{
@@ -101,12 +101,12 @@ impl MusicWideRenderCtx {
 
         let panes = library_arrangement::wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y)?;
         let left_layout = music_arrangement::wide_music_left_layout(
-            panes.left_panel,
+            panes.hero_panel,
             self.selected_album.is_some() && self.images_enabled,
             self.album_tracks.as_ref().map_or(0, Vec::len),
         );
-        layout.wide_music_right_area = panes.right_area;
-        layout.left_area = panes.left_area;
+        layout.wide_music_right_area = panes.browser_area;
+        layout.left_area = panes.hero_area;
         layout.hero_area = left_layout.hero_area;
         if self.selected_album.is_some() {
             layout.wide_music_art_area = left_layout.art_area;
@@ -340,7 +340,7 @@ pub(in crate::app) fn render_narrow_music_group_with_ctx(
     let content_area = if ctx.groups.is_empty() {
         area
     } else {
-        let areas = hero_left::pill_bar_areas(area);
+        let areas = wide_hero::pill_bar_areas(area);
         if ctx.list.is_search_active() {
             crate::app::render::components::hero::render_search_box(
                 f,
@@ -505,15 +505,15 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
         return output;
     };
     layout.wide_music_track_hitmap.clear();
-    let right_panel = panes.right_panel;
-    let right_area = panes.right_area;
+    let browser_panel = panes.browser_panel;
+    let browser_area = panes.browser_area;
     let track_active = ctx.track_cursor.is_some();
     let left_focused = ctx.focused && track_active;
     let right_focused = ctx.focused && !track_active;
-    let Some(left_area) = hero_left::hero_on_left_pane(
+    let Some(left_area) = wide_hero::wide_hero_hero_pane(
         f,
         area,
-        hero_left::LeftPaneFocus::Workspace(ctx.focused && ctx.track_cursor.is_some()),
+        wide_hero::LeftPaneFocus::Workspace(ctx.focused && ctx.track_cursor.is_some()),
     ) else {
         return output;
     };
@@ -532,7 +532,7 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
         let track_area = left_layout.track_area;
         if track_area.height > 0 && track_area.width > 0 && !track_list.is_empty() {
             let (_, track_content_area) =
-                crate::app::render::arrangements::hero_left::hero_on_left_main_content_box(
+                crate::app::render::arrangements::wide_hero::wide_hero_hero_content_box(
                     f, track_area,
                 );
             let paint = super::media_list::render_wide_media_list(
@@ -564,9 +564,9 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
 
     f.render_widget(
         ratatui::widgets::Block::default().style(Style::default().bg(palette::SURFACE_BACKDROP)),
-        right_panel,
+        browser_panel,
     );
-    let right_pane = hero_left::hero_on_left_right_pane(right_panel, right_area);
+    let right_pane = wide_hero::wide_hero_browser_pane(browser_panel, browser_area);
     if ctx.list.is_search_active() {
         crate::app::render::components::hero::render_search_box(
             f,
@@ -574,7 +574,7 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
             ctx.list.search_query.as_deref().unwrap_or_default(),
             ctx.list.search_loading,
         );
-    } else if right_pane.pills_area.y + right_pane.pills_area.height <= right_area.bottom() {
+    } else if right_pane.pills_area.y + right_pane.pills_area.height <= browser_area.bottom() {
         crate::app::render::components::music::render_music_group_pills_row_with_ctx(
             f,
             right_pane.pills_area,
@@ -593,14 +593,14 @@ pub(in crate::app) fn render_wide_music_group_with_ctx(
             list_panel,
         );
     }
-    // Paint the rail frame before the rows: `hero_on_left_list_panel_border`
+    // Paint the rail frame before the rows: `wide_hero_browser_border`
     // rewrites every panel cell's background, so it must not run after the
     // canonical list (which owns the selected-row background). Mirrors
     // `render_wide_tv_with_ctx`.
-    hero_left::hero_on_left_list_panel_border(f, list_panel, right_focused);
+    wide_hero::wide_hero_browser_border(f, list_panel, right_focused);
     if browser_area.height > 0 && browser_area.width > 0 {
         if inline_search.is_active() {
-            // Hero-on-left Wide passes only the right-rail library-list area
+            // Wide hero Wide passes only the right-rail library-list area
             // (design.md D3); the Hero pane and track pane painted above
             // remain visible, and the ordinary grouped album rail does not
             // also paint `browser_area`.
@@ -686,7 +686,7 @@ fn render_wide_left_hero(
             style: Style::default().fg(palette::TEXT_SECONDARY),
         });
     }
-    hero_left::paint_hero_on_left_text(f, left_layout.text_area, &hero_lines);
+    wide_hero::paint_wide_hero_text(f, left_layout.text_area, &hero_lines);
 
     if images_enabled && left_layout.art_area.width > 0 && left_layout.art_area.height > 0 {
         return Some(MusicImagePaint {

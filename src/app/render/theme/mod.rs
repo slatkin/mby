@@ -75,7 +75,7 @@ pub const SCROLLBAR: Color = primitives::SCROLLBAR;
 /// `focused` is the caller's two-input focus model already collapsed to one
 /// bool: the existing `PanelFocus` (which panel is focused) for
 /// inline screens with one focusable region, or `PanelFocus` combined
-/// with a pane bit (`left_focused`) for hero-on-left screens with two.
+/// with a pane bit (`left_focused`) for Wide hero screens with two.
 pub fn resolve_surface_focus(focused: bool) -> Color {
     if focused {
         SURFACE_FOCUSED

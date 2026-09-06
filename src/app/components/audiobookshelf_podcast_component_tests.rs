@@ -465,10 +465,13 @@ fn abs_podcast_component_geometry_is_wide_coherent_and_narrow_resets_wide() {
         geometry.list_area, geometry.right_area,
         "wide list == right panel"
     );
-    assert_eq!(geometry.hero_area.x, wide.x, "wide hero is the left pane");
+    assert_eq!(
+        geometry.right_area.x, wide.x,
+        "wide browser/list is the left pane"
+    );
     assert!(
-        geometry.hero_area.right() <= geometry.right_area.x,
-        "wide hero sits left of the right panel"
+        geometry.right_area.right() <= geometry.hero_area.x,
+        "wide hero sits right of the browser/list pane"
     );
     assert!(geometry.hero_area.bottom() <= wide.bottom());
     assert!(geometry.right_area.right() <= wide.right());

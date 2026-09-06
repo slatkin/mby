@@ -50,7 +50,7 @@ fn selectable_artist_headers_are_typed_row_targets() {
     );
     // Artist headers are display-only and must not appear as row targets.
     // Music-group view renders through `render_wide_right_album_browser`
-    // (shared with the wide hero-on-left layout), which populates
+    // (shared with the wide Wide hero layout), which populates
     // `left_row_targets` directly rather than the legacy `left_row_map`.
     assert!(
         layout.left_row_targets.iter().any(|t| t.is_none()),
@@ -180,7 +180,7 @@ fn narrow_grouped_music_keeps_bottom_hero_fully_visible() {
     // Album rows render below the reserved group pill row (task 3.6a), so
     // screen-space row targets are measured from the content area, not the
     // pane top.
-    let content_top = super::arrangements::hero_left::pill_bar_areas(list_area)
+    let content_top = super::arrangements::wide_hero::pill_bar_areas(list_area)
         .content_area
         .y;
     let selected_screen_row = layout.hero_area.y.saturating_sub(content_top) as usize;
@@ -372,9 +372,9 @@ fn wide_music_frame_publishes_identical_geometry_from_publish_and_paint() {
         .unwrap();
 
     let (published_panes, published_left) = published;
-    assert_eq!(published_panes.left_area, paint_layout.left_area);
+    assert_eq!(published_panes.hero_area, paint_layout.left_area);
     assert_eq!(
-        published_panes.right_area,
+        published_panes.browser_area,
         paint_layout.wide_music_right_area
     );
     assert_eq!(published_left.hero_area, paint_layout.hero_area);

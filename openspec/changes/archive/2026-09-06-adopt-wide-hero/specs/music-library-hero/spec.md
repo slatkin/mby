@@ -71,7 +71,7 @@ In the wide grouped Music composition, the music-group pills SHALL render at the
 - **WHEN** the user selects another music-group pill in wide mode
 - **THEN** the left rail loads that group's albums, returns focus to album browsing, and the right pane follows the resulting album selection
 
-### Requirement: Hero-on-left uses one focus treatment
+### Requirement: Wide hero uses one focus treatment
 
 The Wide hero arrangement SHALL apply one focused and unfocused surface treatment to every screen that uses it, including grouped Music and Home. During album browsing the list pane SHALL carry the focused treatment and the hero pane SHALL carry the resting treatment. During track selection those treatments SHALL reverse. When the Library panel itself is unfocused, both panes SHALL use the unfocused treatment. Grouped Music SHALL NOT define these colours itself.
 

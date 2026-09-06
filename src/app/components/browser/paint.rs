@@ -7,14 +7,14 @@ use super::BrowserComponent;
 use crate::app::components::component_id::BrowserKind;
 use crate::app::palette;
 use crate::app::render::{
-    hero_on_left_list_panel_border, hero_on_left_pane, hero_on_left_right_pane, padded_rect,
-    prepare_wide_emby_hero_card, render_count_label, render_home_hero_content, render_pill_bar,
-    render_search_box, wide_library_panes, HeroData, LetterFilter, LibraryListRenderCtx, PillBar,
+    padded_rect, prepare_wide_emby_hero_card, render_count_label, render_home_hero_content,
+    render_pill_bar, render_search_box, wide_hero_browser_border, wide_hero_browser_pane,
+    wide_hero_hero_pane, wide_library_panes, HeroData, LetterFilter, LibraryListRenderCtx, PillBar,
     PANE_PAD_X, PANE_PAD_Y,
 };
 
 impl BrowserComponent {
-    /// Paints the wide Movies/home-video hero-on-left layout: a read-only
+    /// Paints the wide Movies/home-video Wide hero layout: a read-only
     /// shared Emby hero card on the left and the letter-pill/count/search
     /// row plus the one-column list in the right rail. Mirrors the deleted
     /// legacy wide renderer so the picture is unchanged.
@@ -31,7 +31,7 @@ impl BrowserComponent {
         let Some(panes) = wide_library_panes(body_area, PANE_PAD_X, PANE_PAD_Y) else {
             // Defensive structure only: unreachable on canonical Wide paths.
             // `browser/mod.rs` calls `render_wide_movies` solely when
-            // `shared_hero_presentation(area).is_some()`, and
+            // `wide_hero_presentation(area).is_some()`, and
             // `wide_library_panes` returns `None` only when that same check
             // fails on the same rect (`body_area == area`). If a degenerate
             // rect ever reaches here, keep a canonical render rather than
@@ -48,16 +48,16 @@ impl BrowserComponent {
             self.layout.left_row_map = paint.left_row_map;
             return paint.row_geometry.offset();
         };
-        let right_panel = panes.right_panel;
+        let browser_panel = panes.browser_panel;
 
-        let right_area = panes.right_area;
-        self.layout.movies_wide_right_area = right_area;
+        let browser_area = panes.browser_area;
+        self.layout.movies_wide_right_area = browser_area;
 
         // Left pane: read-only shared hero card (not an interactive hero —
         // `layout.hero_area` stays unset so the left pane is outside mouse
         // geometry, mirroring the legacy wide renderer).
         let hero_content =
-            hero_on_left_pane(f, body_area, crate::app::render::LeftPaneFocus::ReadOnly)
+            wide_hero_hero_pane(f, body_area, crate::app::render::LeftPaneFocus::ReadOnly)
                 .expect("wide movies layout has a hero pane");
         let hero_data = ctx
             .selected_item()
@@ -80,7 +80,7 @@ impl BrowserComponent {
             });
 
         // Right rail: pill row + one-column list.
-        let right_pane = hero_on_left_right_pane(right_panel, right_area);
+        let right_pane = wide_hero_browser_pane(browser_panel, browser_area);
         let pills_area = right_pane.pills_area;
         let list_panel = right_pane.list_panel;
 
@@ -125,9 +125,9 @@ impl BrowserComponent {
         // Frame the rail before the row flow: the helper fills the whole
         // panel background, so it must run before `render_wide_media_list`
         // paints the selected-row bar (matches TV / Music ordering).
-        hero_on_left_list_panel_border(f, list_panel, self.focused);
+        wide_hero_browser_border(f, list_panel, self.focused);
         let final_scroll = if self.inline_search.is_active() {
-            // Hero-on-left Wide passes only the right-rail library-list area
+            // Wide hero Wide passes only the right-rail library-list area
             // (design.md D3); the Hero pane painted above remains visible and
             // the ordinary canonical list does not also paint `content`.
             let items = self.inline_search.ordered_items();

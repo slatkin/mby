@@ -517,18 +517,22 @@ fn browser_row_click_resolves_against_the_current_breakpoints_geometry_not_a_sta
         "the breakpoint change must have actually repainted different list geometry"
     );
 
-    // A click at the OLD wide list's rightmost column, now past the right
-    // edge of the narrow-painted list area, must not resolve to a row: if
-    // resolution consulted stale wide geometry instead of the freshly
-    // painted narrow layout, this click would incorrectly still land on a
-    // list row.
-    let past_narrow_right_edge = narrow_list_area.x + narrow_list_area.width;
+    // A click on the OLD wide list's bottom row, now below the bottom edge
+    // of the shorter narrow-painted list area (the wide browser pane sits
+    // left of the hero and is vertically taller than the narrow list), must
+    // not resolve to a row: if resolution consulted stale wide geometry
+    // instead of the freshly painted narrow layout, this click would
+    // incorrectly still land on a list row.
+    let stale_probe_col = wide_list_area.x;
+    let stale_probe_row = wide_list_area.bottom() - 1;
     assert!(
-        wide_list_area.x + wide_list_area.width > past_narrow_right_edge,
-        "the wide list's old right edge must genuinely extend past the narrow list's new one \
-         for this click to be a meaningful stale-geometry probe"
+        stale_probe_row >= narrow_list_area.bottom()
+            && stale_probe_col >= narrow_list_area.x
+            && stale_probe_col < narrow_list_area.right(),
+        "the old wide list must genuinely extend below the narrow list's new bottom edge at a \
+         shared column for this click to be a meaningful stale-geometry probe"
     );
-    harness.inject(click(past_narrow_right_edge, wide_list_area.y));
+    harness.inject(click(stale_probe_col, stale_probe_row));
     let outcome = harness.step();
     assert!(
         outcome

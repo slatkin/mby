@@ -3,7 +3,7 @@ use super::shell::Model;
 use super::{ConfirmAction, ConfirmModal, TabSelection};
 use crate::app::components::browser::{BrowserContent, BrowserIdentity};
 use crate::app::images::NAV_IMAGE_FETCH_IDLE_DELAY;
-use crate::app::render::{shared_hero_presentation, LibraryListRenderCtx};
+use crate::app::render::{wide_hero_presentation, LibraryListRenderCtx};
 use mbv_core::config::ServiceKind;
 use std::time::Instant;
 
@@ -378,11 +378,11 @@ impl Model {
             return;
         };
         // When the wide Movies/home-video layout is active, the component
-        // paints the full hero-on-left rect; otherwise it paints the narrow
+        // paints the full Wide hero rect; otherwise it paints the narrow
         // inner list area. Derive the presentation from the same shared
         // arrangement predicate used by BrowserComponent::view.
         let area = self.app.layout.main.left_area;
-        let wide = shared_hero_presentation(area).is_some();
+        let wide = wide_hero_presentation(area).is_some();
         if area.width == 0 || area.height == 0 {
             return;
         }

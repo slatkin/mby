@@ -14,7 +14,7 @@ The Feeds Service/tab Wide panel MUST render one full-width selectable row per F
 - **THEN** every visible FeedEntry occupies one row spanning the list width and no second-column cell is emitted
 
 ### Requirement: Wide rail has established semantic framing
-The Wide Feeds Service right rail MUST paint the existing semantic surface/backdrop and border treatment used by the Hero-on-left list panel. The treatment MUST be applied by the arrangement/render boundary, not by arbitrary screen colors. Its semantic border/background MUST NOT overwrite the first visible heading or the final visible FeedEntry/marker at the 82-column threshold or a larger Wide width.
+The Wide Feeds Service left rail MUST paint the existing semantic surface/backdrop and border treatment used by the Wide hero list panel. The treatment MUST be applied by the arrangement/render boundary, not by arbitrary screen colors. Its semantic border/background MUST NOT overwrite the first visible heading or the final visible FeedEntry/marker at the 82-column threshold or a larger Wide width.
 
 #### Scenario: framed rail
 - **GIVEN** a Wide Feeds Service panel with visible entries

@@ -1,11 +1,11 @@
 use crate::app::components::inline_search::InlineSearch;
 use crate::app::components::media_list::WideMediaList;
 use crate::app::layout::LayoutMain;
-use crate::app::render::arrangements::hero_left::{
-    self, place_media_list_below, PANE_PAD_X, PANE_PAD_Y,
-};
 use crate::app::render::arrangements::library as library_arrangement;
 use crate::app::render::arrangements::padded_rect;
+use crate::app::render::arrangements::wide_hero::{
+    self, place_media_list_below, PANE_PAD_X, PANE_PAD_Y,
+};
 use crate::app::render::components::hero::{wrap_overview_lines, HeroContent};
 use crate::app::render::components::hero_model::{Hero, HeroArtwork, HeroArtworkAspect};
 use crate::app::render::components::list_rows::LibraryListRenderCtx;
@@ -105,10 +105,10 @@ impl TvWideRenderCtx {
         else {
             return;
         };
-        layout.tv_wide_left_area = panes.left_area;
-        layout.tv_wide_right_area = panes.right_area;
+        layout.tv_wide_left_area = panes.hero_area;
+        layout.tv_wide_right_area = panes.browser_area;
         layout.left_area = Rect::default();
-        let right_pane = hero_left::hero_on_left_right_pane(panes.right_panel, panes.right_area);
+        let right_pane = wide_hero::wide_hero_browser_pane(panes.browser_panel, panes.browser_area);
         layout.tv_wide_list_area = padded_rect(right_pane.list_panel, PANE_PAD_X, PANE_PAD_Y);
     }
 }
@@ -149,21 +149,21 @@ impl App {
         )
     }
 
-    /// Whether the right panel is in the wide hero-on-left breakpoint right
+    /// Whether the right panel is in the wide Wide hero breakpoint right
     /// now, derived paint-free from the current terminal size. Replaces the
     /// four `LayoutMain::is_wide_*_active()` paint-inference predicates: the
-    /// breakpoint (`shared_hero_presentation`) is the same for every
-    /// hero-on-left destination, so one predicate serves all of them.
+    /// breakpoint (`wide_hero_presentation`) is the same for every
+    /// Wide hero destination, so one predicate serves all of them.
     pub(in crate::app) fn is_right_panel_wide(&self) -> bool {
         self.right_panel_lib_area()
-            .is_some_and(|area| hero_left::shared_hero_presentation(area).is_some())
+            .is_some_and(|area| wide_hero::wide_hero_presentation(area).is_some())
     }
 
-    /// The finalized library content rect when the wide hero-on-left TV
+    /// The finalized library content rect when the wide Wide hero TV
     /// workspace owns `lib_idx`, computed paint-free from the current
     /// terminal size — `None` when the library is not a wide-TV series list
     /// or the breakpoint is narrow. Mirrors the exact gate `render_library`
-    /// applies (`is_wide_tv_library` + `shared_hero_presentation` on the
+    /// applies (`is_wide_tv_library` + `wide_hero_presentation` on the
     /// finalized area), so component mount/focus can be routed a frame
     /// earlier than the deleted previous-frame paint signal this predicate
     /// replaced, which used to flash the narrow browser on entry.
@@ -172,7 +172,7 @@ impl App {
             return None;
         }
         let lib_area = self.right_panel_lib_area()?;
-        hero_left::shared_hero_presentation(lib_area).map(|_| lib_area)
+        wide_hero::wide_hero_presentation(lib_area).map(|_| lib_area)
     }
 
     pub(in crate::app) fn wide_tv_render_ctx(
@@ -221,19 +221,19 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
     let Some(panes) = library_arrangement::wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y) else {
         return (0, None);
     };
-    let right_panel = panes.right_panel;
-    let right_area = panes.right_area;
+    let browser_panel = panes.browser_panel;
+    let browser_area = panes.browser_area;
     let episode_focused = ctx.focused && ctx.episode_cursor.is_some();
     let right_focused = ctx.focused && !episode_focused;
-    let Some(left_area) = hero_left::hero_on_left_pane(
+    let Some(left_area) = wide_hero::wide_hero_hero_pane(
         f,
         area,
-        hero_left::LeftPaneFocus::Workspace(ctx.focused && ctx.episode_cursor.is_some()),
+        wide_hero::LeftPaneFocus::Workspace(ctx.focused && ctx.episode_cursor.is_some()),
     ) else {
         return (0, None);
     };
     layout.tv_wide_left_area = left_area;
-    layout.tv_wide_right_area = right_area;
+    layout.tv_wide_right_area = browser_area;
     layout.left_area = Rect::default();
 
     let (selection_rendered, image_paint) = render_tv_series_selection(
@@ -252,7 +252,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
         render_placeholder(f, left_area, " Loading\u{2026}");
     }
 
-    let right_pane = hero_left::hero_on_left_right_pane(right_panel, right_area);
+    let right_pane = wide_hero::wide_hero_browser_pane(browser_panel, browser_area);
     if ctx.list.is_search_active() {
         crate::app::render::components::hero::render_search_box(
             f,
@@ -299,9 +299,9 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
         width: list_panel.width,
         ..list_area
     };
-    hero_left::hero_on_left_list_panel_border(f, list_panel, right_focused);
+    wide_hero::wide_hero_browser_border(f, list_panel, right_focused);
     let final_scroll = if inline_search.is_active() {
-        // Hero-on-left Wide passes only the right-rail library-list area
+        // Wide hero Wide passes only the right-rail library-list area
         // (design.md D3); the episode/Hero pane painted above remains
         // visible and the ordinary series rail does not also paint
         // `list_area`.
@@ -371,7 +371,7 @@ fn render_tv_series_selection(
 
     // Artwork-slot-first layout (design.md D-D): a full-width 16:9 landscape
     // slot above the title/metadata/overview, sized with the same formula
-    // `prepare_wide_emby_hero_card` uses for Home's wide hero-on-left card.
+    // `prepare_wide_emby_hero_card` uses for Home's wide Wide hero card.
     let artwork_height = if images_enabled {
         (area.width.saturating_mul(9).saturating_add(31) / 32).max(1)
     } else {
@@ -384,7 +384,7 @@ fn render_tv_series_selection(
         .max(EPISODE_LIST_VISIBLE_ROWS)
         .saturating_add(1) // season pill row
         .saturating_add(PANE_PAD_Y * 2);
-    let slots = hero_left::hero_left_slots(area, artwork_height, images_enabled);
+    let slots = wide_hero::wide_hero_slots(area, artwork_height, images_enabled);
 
     let image_paint = slots.artwork.and_then(|artwork_area| {
         match item.artwork_for(HeroArtworkAspect::Landscape) {
@@ -452,7 +452,7 @@ fn render_tv_series_selection(
                 content_area.width.saturating_add(PANE_PAD_X * 2),
                 ov_height,
             );
-            let (_, ov_content) = hero_left::hero_on_left_main_content_box(f, box_area);
+            let (_, ov_content) = wide_hero::wide_hero_hero_content_box(f, box_area);
             let ov_color = if focused {
                 palette::TEXT_STRONG
             } else {
@@ -472,7 +472,7 @@ fn render_tv_series_selection(
     // The episode media-list box is a separate, fixed-height recessed box
     // placed one blank row below the overview box's real painted bottom
     // edge (task 4.2d's regression fix), not pre-reserved by
-    // `hero_left_slots` -- overview height is text-length-dependent and
+    // `wide_hero_slots` -- overview height is text-length-dependent and
     // only known after the overview is painted.
     let Some(media_list_area) = place_media_list_below(
         content_area,
@@ -483,14 +483,14 @@ fn render_tv_series_selection(
         return (true, image_paint);
     };
     let Some(detail) = detail else {
-        let (_, content) = hero_left::hero_on_left_main_content_box(f, media_list_area);
+        let (_, content) = wide_hero::wide_hero_hero_content_box(f, media_list_area);
         render_placeholder(f, content, " Loading\u{2026}");
         return (true, image_paint);
     };
     let Some(season) = detail.seasons.get(season_cursor) else {
         return (true, image_paint);
     };
-    let (detail_panel, detail_area) = hero_left::hero_on_left_main_content_box(f, media_list_area);
+    let (detail_panel, detail_area) = wide_hero::wide_hero_hero_content_box(f, media_list_area);
     if focused {
         f.render_widget(
             Block::default().style(Style::default().bg(palette::SURFACE_ACCENT_SOFT)),
@@ -507,7 +507,7 @@ fn render_tv_series_selection(
         .collect();
     let ids: Vec<usize> = (0..labels.len()).collect();
     // Season pills stay parent-owned chrome (design.md D-D): painted here,
-    // never absorbed into `hero_left_slots`/`WideMediaList`.
+    // never absorbed into `wide_hero_slots`/`WideMediaList`.
     layout.tv_wide_season_tabs = render_pill_bar(
         f,
         Rect::new(detail_area.x, detail_area.y, detail_area.width, 1),

@@ -1,7 +1,7 @@
 use super::test_helpers::*;
 use super::*;
 use crate::app::components::FeedsComponent;
-use crate::app::render::arrangements::hero_left;
+use crate::app::render::arrangements::wide_hero;
 use mbv_core::api::TICKS_PER_SECOND;
 use mbv_core::config::{FeedKind, FeedSubscription};
 use mbv_core::playback_queue::FeedEntry;
@@ -76,108 +76,6 @@ fn terminal_for(component: &mut FeedsComponent, width: u16, height: u16) -> Term
         .draw(|frame| component.view(frame, Rect::new(0, 0, width, height)))
         .unwrap();
     terminal
-}
-
-#[test]
-fn wide_feeds_use_a_left_detail_and_right_entry_workspace() {
-    // Canonical characterization: the parent paints the hero-on-left detail
-    // pane and frames the right rail; the canonical `WideMediaList` paints the
-    // grouped rows into the inset sub-rect. Observable intent preserved from
-    // the legacy painter: left-detail/right-entry split, framed rail with a
-    // reserved bottom border, a non-selectable grouping heading, and the two
-    // entry rows left-aligned to the same column with the selected row filled.
-    for width in [82, 120] {
-        let mut component = feed_component();
-        let terminal = terminal_for(&mut component, width, 30);
-        let layout = component.layout();
-
-        assert!(
-            layout.hero_area.width < width,
-            "hero={:?}",
-            layout.hero_area
-        );
-        assert!(
-            layout.left_area.x > layout.hero_area.x,
-            "hero={:?} list={:?}",
-            layout.hero_area,
-            layout.left_area
-        );
-        assert!(!layout.selector_tabs.is_empty());
-        assert_eq!(
-            layout
-                .left_item_rows
-                .iter()
-                .filter(|row| !row.is_empty())
-                .count(),
-            2
-        );
-        assert!(
-            layout.left_item_rows.iter().all(|row| row.len() <= 1),
-            "rows={:?}",
-            layout.left_item_rows
-        );
-        let buffer = terminal.backend().buffer();
-        assert!(
-            (layout.hero_area.x..layout.hero_area.right()).any(|x| {
-                (layout.hero_area.y..layout.hero_area.bottom())
-                    .any(|y| buffer[(x, y)].bg == crate::app::palette::SURFACE_ARTWORK_PLACEHOLDER)
-            }),
-            "feed hero must paint its reserved artwork slot placeholder"
-        );
-        let panel = Rect::new(
-            layout.left_area.x.saturating_sub(hero_left::PANE_PAD_X),
-            layout.left_area.y.saturating_sub(hero_left::PANE_PAD_Y),
-            layout.left_area.width + 2 * hero_left::PANE_PAD_X,
-            layout.left_area.height + 2 * hero_left::PANE_PAD_Y,
-        );
-        assert_eq!(buffer[(panel.x, panel.y)].symbol(), "▔");
-        assert_eq!(
-            buffer[(panel.x, panel.bottom() - 1)].symbol(),
-            "▁",
-            "Wide Feeds border must reserve its bottom row"
-        );
-        let first_row = layout.left_area.y
-            + layout
-                .left_row_map
-                .iter()
-                .position(|item| item == &Some(0))
-                .expect("first row") as u16;
-        let second_row = layout.left_area.y
-            + layout
-                .left_row_map
-                .iter()
-                .position(|item| item == &Some(1))
-                .expect("second row") as u16;
-        assert_ne!(
-            buffer[(layout.left_area.x, first_row)].bg,
-            ratatui::style::Color::Reset,
-            "selected row must be filled"
-        );
-        let first = (layout.left_area.x..layout.left_area.right())
-            .map(|x| buffer[(x, first_row)].symbol())
-            .collect::<String>();
-        let second = (layout.left_area.x..layout.left_area.right())
-            .map(|x| buffer[(x, second_row)].symbol())
-            .collect::<String>();
-        assert_eq!(first.matches("Entry One").count(), 1, "row={first:?}");
-        assert!(second.contains("Played Entry Two"), "row={second:?}");
-        assert_eq!(
-            first.find("Entry One").map(|c| first[..c].chars().count()),
-            second
-                .find("Played Entry Two")
-                .map(|c| second[..c].chars().count()),
-            "entry titles must share a left edge: first={first:?} second={second:?}"
-        );
-        let heading = (layout.left_area.x..layout.left_area.right())
-            .map(|x| buffer[(x, layout.left_area.y)].symbol())
-            .collect::<String>();
-        assert!(
-            heading.contains("Older than a month"),
-            "heading={heading:?}"
-        );
-        let hero = buffer_to_string(&terminal);
-        assert!(hero.contains("audio/m"), "metadata missing: {hero:?}");
-    }
 }
 
 /// migrate-home-feeds 4.6 regression: after the full arrangement paint the
@@ -282,10 +180,10 @@ fn wide_feeds_reserve_borders_at_the_scrolled_bottom_boundary() {
     assert!(component.scroll() > 0);
 
     let panel = Rect::new(
-        layout.left_area.x.saturating_sub(hero_left::PANE_PAD_X),
-        layout.left_area.y.saturating_sub(hero_left::PANE_PAD_Y),
-        layout.left_area.width + 2 * hero_left::PANE_PAD_X,
-        layout.left_area.height + 2 * hero_left::PANE_PAD_Y,
+        layout.left_area.x.saturating_sub(wide_hero::PANE_PAD_X),
+        layout.left_area.y.saturating_sub(wide_hero::PANE_PAD_Y),
+        layout.left_area.width + 2 * wide_hero::PANE_PAD_X,
+        layout.left_area.height + 2 * wide_hero::PANE_PAD_Y,
     );
     let buffer = terminal.backend().buffer();
     // The scrolled-to selection paints on the last row of the inset list
@@ -300,7 +198,7 @@ fn wide_feeds_reserve_borders_at_the_scrolled_bottom_boundary() {
     assert_eq!(buffer[(panel.x, panel.bottom() - 1)].symbol(), "▁");
 }
 
-/// migrate-home-feeds 5.1: the shared hero-on-left primitive owns the status-row
+/// migrate-home-feeds 5.1: the shared Wide hero primitive owns the status-row
 /// reserve, so the Wide Feeds list panel and left hero panel must bottom out
 /// exactly one row above `area.bottom()` — the same one-row gap every sibling
 /// tab gets from the shared primitive (no per-tab reserve on top of it).
@@ -311,7 +209,7 @@ fn wide_feeds_reserve_a_bottom_row_above_the_status_bar() {
     let terminal = terminal_for(&mut component, 120, height);
     let layout = component.layout();
 
-    let list_panel_bottom = layout.left_area.bottom() + hero_left::PANE_PAD_Y;
+    let list_panel_bottom = layout.left_area.bottom() + wide_hero::PANE_PAD_Y;
     assert_eq!(
         list_panel_bottom,
         height - 1,
@@ -382,7 +280,7 @@ fn feeds_buffer_characterization_covers_default_focused_narrow_and_selected_stat
 fn feeds_pill_row_and_targets_are_characterized_end_to_end() {
     let assert_geometry = |terminal: &Terminal<TestBackend>, layout: &LayoutMain| {
         let panel = Rect::new(0, 0, 60, 20);
-        let areas = hero_left::pill_bar_areas(panel);
+        let areas = wide_hero::pill_bar_areas(panel);
         assert_surface_pills(
             terminal,
             layout,

@@ -1,12 +1,12 @@
 //! The `Hero` component (design.md "Component catalogue"): the reserved
 //! panel that shows the selected item's artwork, metadata and overview
-//! beside (hero-on-left) or inline with its list.
+//! beside (Wide hero) or inline with its list.
 //!
-//! Grouped Music's hero-on-left arrangement (`music_wide.rs`, hero-on-left's
-//! source per design.md decision 4) supplies this module's hero-on-left
-//! geometry (`hero_on_left_panes`, `hero_on_left_right_pane`) and text paint
-//! (`paint_hero_on_left_text`), extracted here in phase 5 ("Assemble
-//! hero-on-left") so future hero-on-left screens (Home, audiobooks — phase
+//! Grouped Music's Wide hero arrangement (`music_wide.rs`, Wide hero's
+//! source per design.md decision 4) supplies this module's Wide hero
+//! geometry (`wide_hero_split`, `wide_hero_browser_pane`) and text paint
+//! (`paint_wide_hero_text`), extracted here in phase 5 ("Assemble
+//! Wide hero") so future Wide hero screens (Home, audiobooks — phase
 //! 6) share them rather than re-deriving their own. `compute_wide_left_layout`
 //! itself (the hero/track vertical split and artwork sizing) stays in
 //! `music_wide.rs`: its constants (`PANE_PAD_X`, `PANE_PAD_Y`, ...) are
@@ -574,7 +574,7 @@ pub(in crate::app::render) fn render_home_hero_meta_block(
 
     row += 1; // blank separator row
 
-    // Hero-on-left (the recessed-box path): the box's own top padding row
+    // Wide hero (the recessed-box path): the box's own top padding row
     // doubles as the separator above, leaving the metadata flush against the
     // box's top edge. Reserve one more row so the gap above the box is
     // visible. The narrow inline path (overview_pad == 0) renders no
@@ -589,7 +589,7 @@ pub(in crate::app::render) fn render_home_hero_meta_block(
         } else {
             palette::TEXT_MUTED
         };
-        // hero-on-left: paint recessed box behind overview.
+        // Wide hero: paint recessed box behind overview.
         let recessed = if overview_pad > 0 {
             // Reserve the remaining rows; Paragraph performs the authoritative
             // wrapping while painting into the final content rect.
@@ -601,9 +601,7 @@ pub(in crate::app::render) fn render_home_hero_meta_block(
                 height: ov_height,
             };
             Some(
-                crate::app::render::arrangements::hero_left::hero_on_left_main_content_box(
-                    f, ov_area,
-                ),
+                crate::app::render::arrangements::wide_hero::wide_hero_hero_content_box(f, ov_area),
             )
         } else {
             None
@@ -649,9 +647,9 @@ pub(in crate::app::render) fn render_home_hero_meta_block(
     }
 }
 
-// ── Hero-on-left arrangement ────────────────────────────────────────────
+// ── Wide hero arrangement ────────────────────────────────────────────
 // Geometry, borders, recessed content blocks, and wrapped-text rendering
-// live in `hero_left.rs` to keep this file under the 800-line cap.
+// live in `wide_hero.rs` to keep this file under the 800-line cap.
 
 /// Renders the fuzzy-search input (query text plus a `[loading…]` suffix
 /// while a search is in flight) into `area`. A single-row control that

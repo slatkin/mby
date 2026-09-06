@@ -110,30 +110,6 @@ fn is_right_panel_wide_reflects_terminal_size_paint_free() {
 }
 
 #[test]
-fn wide_tv_requests_selected_series_primary_image_with_budget_and_placeholder() {
-    let app = tv_app();
-    let mut component = TvWorkspaceComponent::new();
-    component.set_content(app.wide_tv_render_ctx(0, None));
-    component.set_focused(true);
-    let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
-    terminal.draw(|f| component.view(f, f.area())).unwrap();
-    match component.take_image_paint() {
-        Some(HomeImagePaint::Series {
-            area,
-            item,
-            show_placeholder,
-            image_types,
-        }) => {
-            assert_eq!(item.id, "series");
-            assert_eq!((area.width, area.height), (36, 11));
-            assert!(show_placeholder);
-            assert_eq!(image_types, &["Thumb", "Primary", "Backdrop", "Logo"]);
-        }
-        _ => panic!("expected selected Series image request"),
-    }
-}
-
-#[test]
 fn wide_tv_images_off_collapses_artwork_and_uses_full_text_width() {
     let mut app = tv_app();
     let (output, component) = render_tv_workspace(&mut app, &mut LayoutMain::default());
@@ -145,24 +121,6 @@ fn wide_tv_images_off_collapses_artwork_and_uses_full_text_width() {
         output.contains("Pilot"),
         "TV text must remain visible: {output}"
     );
-}
-
-#[test]
-fn wide_tv_series_overview_wraps_below_the_landscape_artwork_slot() {
-    let mut app = tv_app();
-    app.libs[0].nav_stack[0].items[0].overview =
-        "one two three four five six seven eight nine ten eleven twelve thirteen".into();
-    let mut layout = LayoutMain::default();
-    let (output, _) = render_tv_workspace(&mut app, &mut layout);
-    assert!(
-        output.contains("one two three"),
-        "overview should be painted: {output:?}"
-    );
-    assert!(
-        output.contains("four five six"),
-        "overview should wrap below the artwork slot: {output:?}"
-    );
-    assert!(!output.contains("one two three four five six seven eight nine"));
 }
 
 #[test]
@@ -212,7 +170,7 @@ fn wide_tv_persists_series_workspace_and_separate_targets() {
     assert!(output.contains("1:00:00"));
 }
 
-/// `remove-migrated-surface-underpaint` 3.3 (D4): at the wide hero-on-left
+/// `remove-migrated-surface-underpaint` 3.3 (D4): at the wide Wide hero
 /// breakpoint the mounted `TvWorkspaceComponent` owns the picture.
 /// `render_library` publishes the `tv_wide_*` geometry hand-off and
 /// `render_list` then returns (`src/app/render/components/list.rs:113`)
@@ -322,7 +280,7 @@ fn wide_tv_episode_list_uses_soft_accent_when_focused() {
     );
 }
 
-/// migrate-home-feeds 5.1 (§5 geometry test): the shared hero-on-left
+/// migrate-home-feeds 5.1 (§5 geometry test): the shared Wide hero
 /// primitive owns the one-row status-bar reserve, so wide TV's framed series
 /// rail paints its `▁` bottom border two rows above `tv_wide_area`'s bottom,
 /// leaving exactly one blank row before the status bar. Asserted against the

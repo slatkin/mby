@@ -33,7 +33,7 @@ The library list SHALL choose its column count from the width available to the l
 - **WHEN** a non-hero list pane reaches the shared breakpoint
 - **THEN** it MAY render two columns while hero-bearing browsers remain one column
 
-#### Scenario: Hero-on-left list stays single-column
+#### Scenario: Wide hero list stays single-column
 - **WHEN** a Wide hero browser is at or above the shared breakpoint
 - **THEN** its left rail SHALL render a single column
 

@@ -2,10 +2,10 @@ use crate::app::components::media_list::{
     InlineMediaBrowser, MediaKind, MediaListRow, MediaSemanticState, RowGeometry, ViewportAnchor,
     WideMediaList,
 };
-use crate::app::render::arrangements::hero_left::{
-    self, hero_on_left_list_panel_border, hero_on_left_right_pane, PANE_PAD_X, PANE_PAD_Y,
-};
 use crate::app::render::arrangements::padded_rect;
+use crate::app::render::arrangements::wide_hero::{
+    self, wide_hero_browser_border, wide_hero_browser_pane, PANE_PAD_X, PANE_PAD_Y,
+};
 use crate::app::render::components::detail_series_view::{
     SERIES_DETAIL_DIVIDER_ROWS, SERIES_DETAIL_EPISODE_ROWS_ESTIMATE,
     SERIES_DETAIL_TRAILING_BLANK_ROWS, SERIES_IMAGE_COLS, SERIES_IMAGE_ROWS,
@@ -218,7 +218,11 @@ pub(in crate::app) fn render_audiobookshelf_podcast_content(
     geometry: &mut AudiobookshelfPodcastGeometry,
 ) -> Option<HomeImagePaint> {
     *geometry = AudiobookshelfPodcastGeometry::default();
-    let Some((hero_panel, right_panel)) = hero_left::shared_hero_presentation(area) else {
+    let Some(wide_hero::WideHeroPanes {
+        hero: hero_panel,
+        browser: right_panel,
+    }) = wide_hero::wide_hero_presentation(area)
+    else {
         return render_narrow_podcast(
             frame,
             area,
@@ -239,7 +243,7 @@ pub(in crate::app) fn render_audiobookshelf_podcast_content(
     geometry.columns = 1;
     geometry.list_area = right_panel;
     geometry.right_area = right_panel;
-    let right_pane = hero_on_left_right_pane(right_panel, right_panel);
+    let right_pane = wide_hero_browser_pane(right_panel, right_panel);
     if !state.shows.is_empty() {
         // Bucket pills before the hero so its wide-only episode-filter pills
         // append after them in `selector_tabs`.
@@ -252,12 +256,12 @@ pub(in crate::app) fn render_audiobookshelf_podcast_content(
     // right show-list panel, so the hero body carries only
     // author/description/image. Persistent-mode episode pills + table are
     // wide-only.
-    let hero_content_area = hero_left::hero_on_left_pane(
+    let hero_content_area = wide_hero::wide_hero_hero_pane(
         frame,
         area,
-        hero_left::LeftPaneFocus::Workspace(focused && interaction.episode_selection.is_some()),
+        wide_hero::LeftPaneFocus::Workspace(focused && interaction.episode_selection.is_some()),
     )
-    .expect("wide branch already confirmed shared_hero_presentation fits");
+    .expect("wide branch already confirmed wide_hero_presentation fits");
     let image_paint = render_podcast_hero(
         frame,
         hero_content_area,
@@ -288,7 +292,7 @@ pub(in crate::app) fn render_audiobookshelf_podcast_content(
     }
     // Paint the rail frame before the rows: the border primitive rewrites every
     // panel cell background, so it must not run after the canonical list.
-    hero_on_left_list_panel_border(frame, list_panel, focused);
+    wide_hero_browser_border(frame, list_panel, focused);
 
     let mut media: WideMediaList<String> = WideMediaList::new();
     media.set_content(podcast_show_rows(&state.shows));
@@ -346,7 +350,7 @@ fn render_narrow_podcast(
         geometry.list_area = area;
         return None;
     }
-    let parts = hero_left::pill_bar_areas(area);
+    let parts = wide_hero::pill_bar_areas(area);
     paint_bucket_pills(frame, parts.pills_area, state, geometry);
 
     let content_area = parts.content_area;
@@ -435,7 +439,7 @@ fn render_podcast_hero(
         }
     }
     lines.push(HeroLine::Plain(String::new()));
-    // Wide: `area` is already the shared-inset content rect `hero_on_left_pane`
+    // Wide: `area` is already the shared-inset content rect `wide_hero_hero_pane`
     // returned to the caller. Narrow keeps its own selected-item-shell inset.
     let content_area = if wide {
         area
@@ -476,8 +480,7 @@ fn render_podcast_hero(
             height: area.bottom().saturating_sub(result.next_row),
             ..area
         };
-        let (_, listing_content_area) =
-            hero_left::hero_on_left_main_content_box(frame, listing_area);
+        let (_, listing_content_area) = wide_hero::wide_hero_hero_content_box(frame, listing_area);
         let filter = interaction.episode_filter;
         let labels: Vec<String> = AudiobookshelfEpisodeFilter::ALL
             .iter()

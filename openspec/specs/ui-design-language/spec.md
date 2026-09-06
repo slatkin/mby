@@ -48,7 +48,7 @@ the theme SHALL NOT re-export raw primitives as a styling API.
 
 The focused and unfocused appearance of every panel, sub-panel, list, and component SHALL be
 determined in one place from a focus state supplied by the caller. A screen SHALL supply the
-panel's focus state — the existing `PanelFocus` plus, for hero-on-left screens, a pane bit — and
+panel's focus state — the existing `PanelFocus` plus, for Wide hero screens, a pane bit — and
 SHALL NOT name the colour used for any state. This SHALL apply to the left panel's card and queue
 as well as to right-panel content.
 

@@ -55,7 +55,7 @@ fn inline_hero_image_has_shared_top_right_and_gutter_geometry() {
 }
 
 #[test]
-fn hero_on_left_overview_reflows_at_recessed_content_width() {
+fn wide_hero_overview_reflows_at_recessed_content_width() {
     let backend = TestBackend::new(16, 8);
     let mut terminal = Terminal::new(backend).unwrap();
     terminal

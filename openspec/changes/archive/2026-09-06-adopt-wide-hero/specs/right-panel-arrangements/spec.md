@@ -68,7 +68,7 @@ Every hero-bearing right-panel browse surface SHALL use Wide hero for its wide p
 - **WHEN** an Audiobookshelf book library meets the wide geometry conditions
 - **THEN** it renders Wide hero matching grouped Music
 
-### Requirement: The hero-on-left left pane is a shared filled container
+### Requirement: The Wide hero right pane is a shared filled container
 
 Every Wide hero destination's right pane SHALL be painted by a single shared arrangement
 primitive. That primitive SHALL derive the right pane's extent from the shared Wide hero
@@ -87,11 +87,11 @@ right pane SHALL bottom out exactly one row above the status bar on every destin
 selection state, at every Wide geometry. Destinations SHALL NOT paint a separate strip below the
 right pane to simulate that reserve.
 
-#### Scenario: Every hero-on-left destination fills its left pane
+#### Scenario: Every Wide hero destination fills its right pane
 
 - **WHEN** any Wide hero destination renders at Wide geometry
 - **THEN** every cell of its right pane carries the shared hero-pane surface
-- **AND** no cell of the right pane shows the right column's backdrop surface
+- **AND** no cell of the right pane shows the left column's backdrop surface
 
 #### Scenario: Nothing is selected
 
@@ -106,7 +106,7 @@ right pane to simulate that reserve.
 - **THEN** the content is anchored to the top of the pane's content inset
 - **AND** the pane's painted extent is unchanged by the content's height
 
-#### Scenario: The left pane bottoms out one row above the status bar
+#### Scenario: The right pane bottoms out one row above the status bar
 
 - **WHEN** any Wide hero destination renders at Wide geometry
 - **THEN** the filled right pane's bottom edge is exactly one row above the status bar
@@ -123,7 +123,7 @@ right pane to simulate that reserve.
 - **WHEN** two Wide hero destinations render at the same Wide geometry
 - **THEN** their hero content begins at the same offset from their right pane's edges
 
-### Requirement: Left-pane focus treatment follows one rule
+### Requirement: Pane focus treatment follows one rule
 
 A Wide hero right pane SHALL render the focused surface treatment when, and only when, that
 pane hosts a workspace that can hold focus and that workspace currently holds focus. This rule
@@ -153,7 +153,7 @@ focused.
 - **WHEN** a destination whose right pane is a read-only hero renders in any focus state
 - **THEN** its right pane renders the resting surface treatment
 
-### Requirement: Hero-on-left presents up to two focusable panes
+### Requirement: Wide hero presents up to two focusable panes
 
 The Wide hero arrangement SHALL present up to two panes, of which at most one is focused, and
 only while the right panel itself is focused. A screen with a read-only hero pane — Home, the
@@ -288,17 +288,17 @@ The inline hero SHALL render one content shape across all surfaces: title, optio
 - **WHEN** a formerly separate-detail surface crosses the shared breakpoint in either direction
 - **THEN** it switches only between Wide hero and selected-row replacement
 
-#### Scenario: A wide hero-on-left screen falls below the breakpoint
+#### Scenario: A wide hero screen falls below the breakpoint
 
 - **WHEN** a Wide hero surface crosses below the shared breakpoint
 - **THEN** it renders selected-row replacement with one browser column
 
-#### Scenario: A hero-on-left screen falls below the breakpoint
+#### Scenario: A Wide hero screen falls below the breakpoint
 
 - **WHEN** a Wide hero surface no longer meets either wide geometry condition
 - **THEN** it renders selected-row replacement
 
-### Requirement: Shared hero-on-left arrangement owns the status-row reserve
+### Requirement: Shared Wide hero arrangement owns the status-row reserve
 The shared Wide hero arrangement primitive SHALL reserve the one status-bar row when it computes the hero and list panes, so every Wide hero destination inherits the reserve from one place. Screens and components SHALL NOT re-derive the reserve (no per-tab `saturating_sub(1)`, `bottom_pad`, or equivalent) on top of the panes the shared primitive returns.
 
 #### Scenario: Panels leave one blank row above the status bar
@@ -342,6 +342,9 @@ The Audiobookshelf Podcast Wide surface SHALL render through the shared Wide her
 
 - FROM: `Hero-on-left presents up to two focusable panes`
 - TO: `Wide hero presents up to two focusable panes`
+
+- FROM: `Left-pane focus treatment follows one rule`
+- TO: `Pane focus treatment follows one rule`
 
 - FROM: `Shared hero-on-left arrangement owns the status-row reserve`
 - TO: `Shared Wide hero arrangement owns the status-row reserve`

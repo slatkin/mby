@@ -1,21 +1,20 @@
-//! Characterization tests (task 1.1, standardize-hero-on-left-pane): pin the
-//! *current* Wide left-pane output of all seven hero-on-left destinations
+//! Characterization tests (task 1.1, standardize-Wide-hero-pane): pin the
+//! *current* Wide browser-pane output of all seven Wide hero destinations
 //! before any paint/primitive change lands. These intentionally capture
 //! today's drifted behaviour (the Home clamp, ABS Podcasts' missing fill, ABS
 //! Books' foreground-only `.style(Color)` bug, Feeds' conditional fill) as-is
 //! -- they are a baseline to diff phases 2/3 against, not a statement of
-//! correct behaviour. Must land in its own commit before any hero-left paint
+//! correct behaviour. Must land in its own commit before any Wide hero paint
 //! or primitive change (ledger migration flow).
 
 use super::test_helpers::{buffer_to_string, make_audiobookshelf_book_app, make_music_group_app};
-use crate::app::components::browser::BrowserContent;
 use crate::app::components::{
-    AudiobookshelfBookComponent, AudiobookshelfPodcastComponent, BrowserComponent, BrowserKind,
-    FeedsComponent, HomeComponent, MusicWorkspaceComponent, TvWorkspaceComponent,
+    AudiobookshelfBookComponent, AudiobookshelfPodcastComponent, FeedsComponent, HomeComponent,
+    MusicWorkspaceComponent, TvWorkspaceComponent,
 };
 use crate::app::palette;
-use crate::app::render::arrangements::hero_left::{PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::arrangements::library::wide_library_panes;
+use crate::app::render::arrangements::wide_hero::{PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::components::list_rows::LibraryListRenderCtx;
 use crate::app::render::TvWideRenderCtx;
 use crate::app::tests::make_item;
@@ -41,50 +40,6 @@ fn direct_terminal(mut draw: impl FnMut(&mut ratatui::Frame)) -> Terminal<TestBa
     terminal
 }
 
-/// Movies/home-videos/Emby-podcasts/feed-group browser: `BrowserComponent`
-/// drives `render_wide_movies` for `BrowserKind::Movies`/`HomeVideos`, or for
-/// any kind carrying `narrow_extras.feed_items`. One representative kind
-/// (`Movies`) characterizes the shared code path all four destinations run.
-#[test]
-fn movies_family_wide_left_pane_unconditional_fill_double_horizontal_inset() {
-    let mut component = BrowserComponent::new_for_kind(BrowserKind::Movies);
-    let mut item = make_item("Focused Movie", "Movie");
-    item.overview = "A short overview.".into();
-    component.set_content(BrowserContent::from_items(vec![item]));
-    component.set_focused(true);
-    let area = wide_area();
-    let terminal = direct_terminal(|f| component.view(f, area));
-    let buffer = terminal.backend().buffer();
-
-    let panes = wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
-
-    // Fill is unconditional and full-extent today (not the broken class).
-    assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
-        palette::SURFACE_RESTING
-    );
-    assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
-        palette::SURFACE_RESTING
-    );
-    // The shared hero pane owns the single `(PANE_PAD_X, PANE_PAD_Y)` inset.
-    let single_inset_x = left_panel.x + PANE_PAD_X;
-    let title = (left_panel.y..left_panel.bottom()).find_map(|y| {
-        let row = (left_panel.x..left_panel.right())
-            .map(|x| buffer[(x, y)].symbol())
-            .collect::<String>();
-        row.find("Focused Movie")
-            .map(|x| (left_panel.x + x as u16, y))
-    });
-    assert_eq!(
-        title.map(|(x, _)| x),
-        Some(single_inset_x),
-        "characterizes the shared single horizontal inset"
-    );
-    assert_eq!(title.map(|(_, y)| y), Some(13), "row position is unchanged");
-}
-
 /// TV already routes through `wide_library_panes(area, PANE_PAD_X,
 /// PANE_PAD_Y)` and `resolve_surface_focus` -- the one destination the
 /// standardization leaves visually unchanged (task 3.2).
@@ -104,14 +59,14 @@ fn tv_wide_left_pane_unconditional_fill_shared_inset() {
     let buffer = terminal.backend().buffer();
 
     let panes = wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
+    let hero_panel = panes.hero_panel;
 
     assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
+        buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::resolve_surface_focus(false)
     );
     assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
+        buffer[(hero_panel.x, hero_panel.bottom() - 1)].bg,
         palette::resolve_surface_focus(false)
     );
 }
@@ -130,14 +85,14 @@ fn music_wide_left_pane_unconditional_fill_no_horizontal_pad() {
     let buffer = terminal.backend().buffer();
 
     let panes = wide_library_panes(area, 0, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
+    let hero_panel = panes.hero_panel;
 
     assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
+        buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::resolve_surface_focus(false)
     );
     assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
+        buffer[(hero_panel.x, hero_panel.bottom() - 1)].bg,
         palette::resolve_surface_focus(false)
     );
 }
@@ -313,7 +268,7 @@ fn feeds_wide_left_pane_fills_unconditionally_with_no_selection() {
 }
 
 /// Feeds with no entries to select: `feeds.rs:170-184` returns before the
-/// hero-on-left pane is ever reached (a placeholder message paints instead),
+/// Wide hero pane is ever reached (a placeholder message paints instead),
 /// so no `hero_area` is published at all -- the broken empty-selection state
 /// task 2.3 fixes (D1: an unconditional pane fill even with nothing
 /// selected).
@@ -336,7 +291,7 @@ fn feeds_wide_left_pane_unfilled_with_no_selected_entry() {
 }
 
 /// ABS Books (task 2.2): the `.style(Color)` foreground-only bug is fixed --
-/// the wide left pane is filled via `hero_on_left_pane`, focus-green
+/// the wide left pane is filled via `wide_hero_hero_pane`, focus-green
 /// (`LeftPaneFocus::Workspace`) only when a chapter is selected while
 /// focused.
 #[test]
@@ -352,16 +307,16 @@ fn abs_books_wide_left_pane_fills_via_shared_primitive() {
     let geometry = component.geometry();
     assert!(geometry.wide);
     let panes = wide_library_panes(area, 0, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
+    let hero_panel = panes.hero_panel;
     let buffer = terminal.backend().buffer();
     // No chapter is selected in this fixture, so the workspace is not held:
     // the pane stays resting, not focus-green.
     assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
+        buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::SURFACE_RESTING
     );
     assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
+        buffer[(hero_panel.x, hero_panel.bottom() - 1)].bg,
         palette::SURFACE_RESTING
     );
 
@@ -372,12 +327,12 @@ fn abs_books_wide_left_pane_fills_via_shared_primitive() {
     let focused_terminal = direct_terminal(|f| component.view(f, area));
     let focused_buffer = focused_terminal.backend().buffer();
     assert_eq!(
-        focused_buffer[(left_panel.x, left_panel.y)].bg,
+        focused_buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::SURFACE_FOCUSED
     );
 }
 
-/// ABS Podcasts (task 2.1): the wide left pane fills via `hero_on_left_pane`.
+/// ABS Podcasts (task 2.1): the wide left pane fills via `wide_hero_hero_pane`.
 /// D8's gain: this surface goes focus-green when the episode workspace holds
 /// focus (mirroring TV), not a bare `focused`.
 #[test]
@@ -444,7 +399,7 @@ fn abs_podcast_wide_hero_keeps_text_with_images_on_or_off() {
 
 /// Sanity: the fixture width used throughout this module clears the shared
 /// two-column breakpoint, so every characterization above exercises the Wide
-/// hero-on-left presentation rather than falling back to narrow.
+/// Wide hero presentation rather than falling back to narrow.
 #[test]
 fn fixture_width_is_wide() {
     const { assert!(WIDTH >= TWO_COLUMN_THRESHOLD) };

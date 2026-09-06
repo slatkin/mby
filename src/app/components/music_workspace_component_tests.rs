@@ -643,7 +643,7 @@ fn music_workspace_wide_search_hides_grouped_rows_and_paints_flat_results() {
     assert!(list_area.width > 0 && list_area.height > 0);
     assert!(
         list_area.x > 0,
-        "search paints in the right rail, not over the Hero pane: {list_area:?}"
+        "search paints in the browser pane, not over the Hero pane: {list_area:?}"
     );
 
     let buffer = terminal.backend().buffer();
@@ -660,16 +660,19 @@ fn music_workspace_wide_search_hides_grouped_rows_and_paints_flat_results() {
             found_heading = true;
         }
     }
-    assert!(found_result, "flat search result painted in the rail");
+    assert!(
+        found_result,
+        "flat search result painted in the browser pane"
+    );
     assert!(
         !found_heading,
         "no artist heading painted in the search list area"
     );
 
-    // The Hero pane (left of the rail) remains painted.
+    // The Hero pane (right of the browser pane) remains painted.
     let mut hero_painted = false;
     for y in 0..30 {
-        let row: String = (0..list_area.x)
+        let row: String = (list_area.x + list_area.width..120)
             .map(|x| buffer.cell((x, y)).unwrap().symbol())
             .collect();
         if row.contains("Album 0") {

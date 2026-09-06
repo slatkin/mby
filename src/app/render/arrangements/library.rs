@@ -1,12 +1,12 @@
-use super::{hero_left, padded_rect};
+use super::{padded_rect, wide_hero};
 use ratatui::layout::Rect;
 
 /// The shared padded panes used by wide library presentations.
 pub(in crate::app) struct WideLibraryPanes {
-    pub left_panel: Rect,
-    pub right_panel: Rect,
-    pub left_area: Rect,
-    pub right_area: Rect,
+    pub hero_panel: Rect,
+    pub browser_panel: Rect,
+    pub hero_area: Rect,
+    pub browser_area: Rect,
 }
 
 pub(in crate::app) fn wide_library_panes(
@@ -14,19 +14,22 @@ pub(in crate::app) fn wide_library_panes(
     pad_x: u16,
     pad_y: u16,
 ) -> Option<WideLibraryPanes> {
-    let (left_panel, right_panel) = hero_left::shared_hero_presentation(area)?;
-    let left_area = padded_rect(left_panel, pad_x, pad_y);
-    let right_area = Rect {
-        x: right_panel.x,
-        y: right_panel.y.saturating_add(pad_y),
-        width: right_panel.width,
-        height: right_panel.height.saturating_sub(pad_y * 2),
+    let wide_hero::WideHeroPanes {
+        hero: hero_panel,
+        browser: browser_panel,
+    } = wide_hero::wide_hero_presentation(area)?;
+    let hero_area = padded_rect(hero_panel, pad_x, pad_y);
+    let browser_area = Rect {
+        x: browser_panel.x,
+        y: browser_panel.y.saturating_add(pad_y),
+        width: browser_panel.width,
+        height: browser_panel.height.saturating_sub(pad_y * 2),
     };
     Some(WideLibraryPanes {
-        left_panel,
-        right_panel,
-        left_area,
-        right_area,
+        hero_panel,
+        browser_panel,
+        hero_area,
+        browser_area,
     })
 }
 
@@ -46,7 +49,7 @@ pub(in crate::app::render) fn selected_detail_content_area(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::render::arrangements::hero_left::HERO_ON_LEFT_MIN_AREA_HEIGHT;
+    use crate::app::render::arrangements::wide_hero::WIDE_HERO_MIN_AREA_HEIGHT;
 
     #[test]
     fn wide_library_preserves_breakpoint_and_padding() {
@@ -54,14 +57,14 @@ mod tests {
             x: 2,
             y: 3,
             width: crate::app::TWO_COLUMN_THRESHOLD,
-            height: HERO_ON_LEFT_MIN_AREA_HEIGHT + 1,
+            height: WIDE_HERO_MIN_AREA_HEIGHT + 1,
         };
         let panes = wide_library_panes(area, 2, 1).expect("wide area");
-        assert_eq!(panes.left_area.x, panes.left_panel.x + 2);
-        assert_eq!(panes.right_area.y, panes.right_panel.y + 1);
+        assert_eq!(panes.hero_area.x, panes.hero_panel.x + 2);
+        assert_eq!(panes.browser_area.y, panes.browser_panel.y + 1);
         assert!(wide_library_panes(
             Rect {
-                height: HERO_ON_LEFT_MIN_AREA_HEIGHT,
+                height: WIDE_HERO_MIN_AREA_HEIGHT,
                 ..area
             },
             2,

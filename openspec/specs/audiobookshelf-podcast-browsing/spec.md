@@ -64,7 +64,7 @@ mbv SHALL list podcast shows from the selected Audiobookshelf library using boun
 - **THEN** mbv SHALL select the nearest valid show or the library's empty state
 
 ### Requirement: Podcast libraries use the shared responsive hero presentation
-An Audiobookshelf podcast library SHALL use hero-on-left when the shared wide geometry conditions fit and selected-row replacement otherwise. Wide detail occupies the left workspace beside a single-column show browser; inline detail replaces the selected show row in one scrolling column. The podcast tab SHALL not reserve a separate detail block or define a surface-specific geometry rule.
+An Audiobookshelf podcast library SHALL use Wide hero when the shared wide geometry conditions fit and selected-row replacement otherwise. Wide detail occupies the right workspace beside a single-column show browser; inline detail replaces the selected show row in one scrolling column. The podcast tab SHALL not reserve a separate detail block or define a surface-specific geometry rule.
 
 The following substitutions SHALL be the only domain changes to that composition:
 
@@ -81,7 +81,7 @@ All other observable layout behavior SHALL match the TV Shows tab, including the
 - **WHEN** an Audiobookshelf podcast library and a TV Shows library are displayed at the same terminal dimensions and image setting
 - **THEN** both tabs SHALL use the same shared wide or inline presentation for their available geometry
 - **THEN** the podcast tab SHALL render podcast shows in the browser positions occupied by Series rows in the TV Shows tab
-- **THEN** wide podcast detail SHALL occupy the left workspace beside the single-column browser
+- **THEN** wide podcast detail SHALL occupy the right workspace beside the single-column browser
 
 #### Scenario: Podcast selection changes
 - **WHEN** the user moves selection between podcast shows
@@ -94,7 +94,7 @@ All other observable layout behavior SHALL match the TV Shows tab, including the
 
 #### Scenario: Terminal width crosses the TV list column breakpoint
 - **WHEN** the podcast tab crosses a width at which the TV Shows tab changes between one and two list columns
-- **THEN** the podcast tab SHALL switch between hero-on-left and selected-row replacement at the shared boundary
+- **THEN** the podcast tab SHALL switch between Wide hero and selected-row replacement at the shared boundary
 
 #### Scenario: Terminal height cannot fit the hero
 - **WHEN** the TV Shows tab would suppress its hero because the available height cannot fit the minimum hero and a usable list

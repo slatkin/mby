@@ -1,11 +1,11 @@
 use ratatui::layout::Rect;
 
 pub(in crate::app) mod chrome;
-pub(in crate::app) mod hero_left;
 pub(in crate::app) mod inline_search;
 pub(in crate::app) mod library;
 pub(in crate::app) mod music;
 pub(in crate::app) mod queue;
+pub(in crate::app) mod wide_hero;
 
 /// Inset a `Rect` by symmetric horizontal/vertical padding: `pad_x` on each
 /// side, `pad_y` top and bottom. Shared by every arrangement that pads a

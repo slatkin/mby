@@ -17,7 +17,7 @@ use super::mouse::gesture::{MouseGesture, MouseGestureState};
 use super::msg::{Msg, PodcastEpisodeIntent, PodcastEpisodeTransition, ShellRequest};
 use super::user_event::UserEvent;
 use crate::app::render::{
-    render_audiobookshelf_podcast_content, shared_hero_presentation, AudiobookshelfPodcastGeometry,
+    render_audiobookshelf_podcast_content, wide_hero_presentation, AudiobookshelfPodcastGeometry,
     HomeImagePaint, PodcastInteraction,
 };
 use crate::app::types_audiobookshelf_browse::{
@@ -417,7 +417,7 @@ impl Default for AudiobookshelfPodcastComponent {
 
 impl Component for AudiobookshelfPodcastComponent {
     fn view(&mut self, frame: &mut Frame, area: Rect) {
-        let wide = shared_hero_presentation(area).is_some();
+        let wide = wide_hero_presentation(area).is_some();
         // §2.5: at a breakpoint flip carry the outgoing control's anchor into
         // the incoming one so the selected show keeps its screen-row offset.
         if let Some(was_wide) = self.last_wide {

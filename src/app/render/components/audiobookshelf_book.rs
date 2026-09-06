@@ -3,11 +3,11 @@ use crate::app::components::media_list::{
     WideMediaList,
 };
 use crate::app::palette;
-use crate::app::render::arrangements::hero_left::{
-    self, hero_on_left_list_panel_border, hero_on_left_right_pane, PANE_PAD_X, PANE_PAD_Y,
-};
 use crate::app::render::arrangements::library as library_arrangement;
 use crate::app::render::arrangements::padded_rect;
+use crate::app::render::arrangements::wide_hero::{
+    self, wide_hero_browser_border, wide_hero_browser_pane, PANE_PAD_X, PANE_PAD_Y,
+};
 use crate::app::render::components::audiobookshelf_books::BookHeroPlan;
 use crate::app::render::components::hero::{
     paint_hero_content, selected_detail_shell, wrap_overview_lines, HeroContent, HeroImage,
@@ -45,7 +45,7 @@ pub(in crate::app) struct AudiobookshelfBookGeometry {
     /// `LayoutMain.left_area` so `lib_page_size()` regains its real stride
     /// after render ownership moved to the component (2.1j).
     pub left_area: Rect,
-    /// Whether the last painted presentation is the wide hero-on-left
+    /// Whether the last painted presentation is the wide Wide hero
     /// layout (mirrors the legacy wide/narrow gate; the Enter activate
     /// decision now uses `App::is_right_panel_wide()` instead).
     pub wide: bool,
@@ -160,16 +160,16 @@ pub(in crate::app) fn render_audiobookshelf_book_content(
     }
 
     let plan = book_hero_plan(state, area.width, images_enabled);
-    if hero_left::shared_hero_presentation(area).is_some() {
+    if wide_hero::wide_hero_presentation(area).is_some() {
         let panes = library_arrangement::wide_library_panes(area, 0, PANE_PAD_Y)?;
-        geometry.left_area = panes.left_area;
+        geometry.left_area = panes.hero_area;
         geometry.wide = true;
-        let hero_content_area = hero_left::hero_on_left_pane(
+        let hero_content_area = wide_hero::wide_hero_hero_pane(
             frame,
             area,
-            hero_left::LeftPaneFocus::Workspace(focused && interaction.chapter_selection.is_some()),
+            wide_hero::LeftPaneFocus::Workspace(focused && interaction.chapter_selection.is_some()),
         )
-        .expect("wide branch already confirmed shared_hero_presentation fits");
+        .expect("wide branch already confirmed wide_hero_presentation fits");
         let hero_height = (plan.content_rows + 1).min(hero_content_area.height);
         let hero_area = Rect {
             height: hero_height,
@@ -190,7 +190,7 @@ pub(in crate::app) fn render_audiobookshelf_book_content(
             ..hero_content_area
         };
         let (_, chapters_content_area) =
-            hero_left::hero_on_left_main_content_box(frame, chapters_area);
+            wide_hero::wide_hero_hero_content_box(frame, chapters_area);
         render_book_rows(
             frame,
             chapters_content_area,
@@ -201,7 +201,7 @@ pub(in crate::app) fn render_audiobookshelf_book_content(
             geometry,
         );
         let rail_focused = focused && interaction.chapter_selection.is_none();
-        let right_pane = hero_on_left_right_pane(panes.right_panel, panes.right_area);
+        let right_pane = wide_hero_browser_pane(panes.browser_panel, panes.browser_area);
         geometry.selector_tabs = render_book_pills(
             frame,
             right_pane.pills_area,
@@ -219,7 +219,7 @@ pub(in crate::app) fn render_audiobookshelf_book_content(
         }
         // Paint the rail frame before the rows: the border primitive rewrites
         // every panel cell background, so it must not run after the list.
-        hero_on_left_list_panel_border(frame, list_panel, rail_focused);
+        wide_hero_browser_border(frame, list_panel, rail_focused);
 
         let mut media: WideMediaList<String> = WideMediaList::new();
         media.set_content(book_rows(state, interaction.selected_bucket));
@@ -283,7 +283,7 @@ fn render_narrow_book(
     narrow_list: &mut InlineMediaBrowser<String>,
     flip_anchor: Option<&ViewportAnchor<String>>,
 ) -> Option<super::home_hero::HomeImagePaint> {
-    let parts = hero_left::pill_bar_areas(area);
+    let parts = wide_hero::pill_bar_areas(area);
     geometry.left_area = parts.content_area;
     geometry.wide = false;
     geometry.selector_tabs =

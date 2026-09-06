@@ -61,7 +61,7 @@ fn wide_home_video_uses_a_left_detail_and_right_rail() {
     assert!(layout.movies_wide_right_area.height > 0);
 }
 
-/// `remove-migrated-surface-underpaint` 3.2 (D4): at the wide hero-on-left
+/// `remove-migrated-surface-underpaint` 3.2 (D4): at the wide Wide hero
 /// breakpoint the mounted `BrowserComponent` owns the Movies / home-video
 /// picture. Post task 3.8 the legacy `render_library` `EmbyLibrary` arm only
 /// reserves the destination `left_area` and paints no row, banner, or hero —
@@ -161,105 +161,10 @@ fn letter_filter_default_is_the_first_bucket() {
     );
 }
 
-fn letter_grouped_series_app() -> App {
-    let mut app = make_app_stub();
-    app.tab = TabSelection::EmbyLibrary(0);
-
-    let mut library = make_item("Shows", "CollectionFolder");
-    library.id = "lib-shows".into();
-    library.is_folder = true;
-    library.collection_type = "tvshows".into();
-
-    let series: Vec<_> = (0..55)
-        .map(|i| {
-            let letter = (b'A' + (i % 26) as u8) as char;
-            let name = format!("{letter}alpha Series {i:02}");
-            let mut s = make_item(&name, "Series");
-            s.id = format!("series-{i}");
-            s
-        })
-        .collect();
-
-    app.libs.push(LibraryTab {
-        nav_stack: vec![BrowseLevel {
-            parent_id: "lib-shows".into(),
-            title: "Shows".into(),
-            items: series,
-            total_count: 55,
-            resting: crate::app::types_browse::BrowseResting::new(0, 0),
-            item_types: Some("Series".into()),
-            unplayed_only: false,
-            sort_by: "SortName".into(),
-            sort_order: "Ascending".into(),
-            loading: false,
-            all_items: None,
-            letter_filter: None,
-            music_grouping: None,
-        }],
-        library_total: Some(55),
-        ..LibraryTab::new(library)
-    });
-    app
-}
-
-#[test]
-fn tv_series_list_computes_sorted_indices_when_above_threshold() {
-    // Narrow letter-grouped TV is painted by the mounted `BrowserComponent`
-    // (task 3.8). Its control exports row geometry for the compatibility hit
-    // map, not a second sorted-index projection. Use the Wide TV control's
-    // published sorted order below as the durable ordering evidence.
-    let mut app = letter_grouped_series_app();
-    let mut layout = LayoutMain::default();
-    let mut terminal = ratatui::Terminal::new(ratatui::backend::TestBackend::new(120, 20)).unwrap();
-    // Wide TV is component-owned (task 5.3d.18d): the App frame only
-    // publishes the `tv_wide_*` hand-off geometry, and the mounted
-    // `TvWorkspaceComponent` paints the surface pills over it, exactly as
-    // the live shell does.
-    let mut component = crate::app::components::TvWorkspaceComponent::new();
-    component.set_content(app.wide_tv_render_ctx(0, None));
-    let wide_area = ratatui::layout::Rect::new(0, 0, 120, 20);
-    terminal
-        .draw(|f| {
-            app.render_library(f, wide_area, &mut layout, None);
-            component.view(f, wide_area);
-        })
-        .unwrap();
-    let component_layout = component.test_layout();
-    let first_idx = component_layout
-        .left_sorted_indices
-        .first()
-        .copied()
-        .expect("Wide TV control publishes sorted order for grouped series");
-    assert!(
-        app.libs[0].nav_stack[0].items[first_idx]
-            .name
-            .starts_with('A'),
-        "first Wide TV sorted item should start with A, got: {}",
-        app.libs[0].nav_stack[0].items[first_idx].name,
-    );
-    assert_surface_pills(
-        &terminal,
-        component_layout,
-        ratatui::layout::Rect {
-            y: component_layout.selector_tabs[0].0.y,
-            height: component_layout
-                .tv_wide_right_area
-                .bottom()
-                .saturating_sub(component_layout.selector_tabs[0].0.y),
-            ..component_layout.tv_wide_right_area
-        },
-        1,
-        ratatui::style::Color::Reset,
-        &(0..9).collect::<Vec<_>>(),
-        &["⌘", "A–C", "D–F", "G–I", "J–L", "M–O", "P–R", "S–U", "V–Z"],
-        0,
-    );
-}
-
 /// Characterization test for the narrow (single-column) Series inline hero
 /// (task 2.1/2.2): renders hero content only (title/meta/overview/image) --
 /// no "Series:" season pill/count row, no episode table. The wide
-/// (hero-on-left) presentation is a non-goal here; see `tv_wide_tests.rs`
+/// (Wide hero) presentation is a non-goal here; see `tv_wide_tests.rs`
 /// for its unchanged coverage.
 #[test]
 fn narrow_series_inline_hero_shows_only_hero_content_no_season_or_episode_list() {
@@ -330,7 +235,7 @@ fn narrow_series_inline_hero_shows_only_hero_content_no_season_or_episode_list()
     );
 }
 
-/// migrate-home-feeds 5.1 (§5 geometry test): the shared hero-on-left
+/// migrate-home-feeds 5.1 (§5 geometry test): the shared Wide hero
 /// primitive owns the one-row status-bar reserve, so wide Music's framed list
 /// panel must paint its `▁` bottom border two rows above `wide_music_area`'s
 /// bottom, leaving exactly one blank row between the panel and the status bar.

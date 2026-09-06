@@ -1,7 +1,7 @@
 //! Interactive Component for the cross-Service Home destination.
 //!
 //! The component owns the selected section (pill) and section identity; the
-//! embedded canonical controls (`WideMediaList` for hero-on-left Wide,
+//! embedded canonical controls (`WideMediaList` for Wide hero Wide,
 //! `InlineMediaBrowser` for inline Narrow) own the cursor and scroll over the
 //! active section's projected rows. `render_home_content`
 //! (`render/components/home.rs`) is the parent-owned hero + pill + chrome
@@ -56,7 +56,7 @@ pub struct HomeComponent {
     inline_list: InlineMediaBrowser<String>,
     loading: bool,
     section: usize,
-    /// Which canonical control the last `view()` painted (hero-on-left Wide vs
+    /// Which canonical control the last `view()` painted (Wide hero Wide vs
     /// inline Narrow). Drives the single `ViewportAnchor` handoff on a
     /// breakpoint transition and which control `cursor()` reads.
     wide: bool,
@@ -628,7 +628,7 @@ impl Component for HomeComponent {
         // outgoing control's selected target and screen-row offset into the
         // incoming control (design.md D2). The cursors already track in
         // lockstep; the anchor keeps the offset continuous across the resize.
-        let wide = crate::app::render::shared_hero_presentation(area).is_some();
+        let wide = crate::app::render::wide_hero_presentation(area).is_some();
         if wide != self.wide {
             let viewport_height = self.list_area.height.max(1) as usize;
             let anchor: Option<ViewportAnchor<String>> = if self.wide {

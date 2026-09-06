@@ -1,0 +1,30 @@
+## 1. Establish Wide hero vocabulary
+
+- [x] 1.1 Update `CONTEXT.md` so `Wide hero` replaces `Hero-on-left`, defines the left browser/right hero arrangement, and preserves `Inline hero`; verify the current presentation section contains no `Hero-on-left` term.
+- [x] 1.2 Add an ADR that supersedes ADR 0021 with the Wide hero/Inline hero decision and leaves accepted historical ADR and archived OpenSpec files unchanged; verify ADR links and supersession text resolve correctly.
+- [x] 1.3 Rename current crate-private `hero_on_left` modules, functions, types, fields, and comments to semantic `wide_hero`, `browser`, and `hero/workspace` names without compatibility aliases; verify `rg 'hero_on_left|Hero-on-left' src CONTEXT.md docs/adr openspec/specs` reports only explicitly retained historical references.
+
+## 2. Mirror the shared arrangement
+
+- [x] 2.1 Change the shared Wide hero pane calculation to place the existing larger browser pane on the left and the existing approximately 40% hero pane on the right while preserving the gap, minimum widths, breakpoint, minimum-height guard, padding, and status-row reserve; verify `cargo check -p mbv` succeeds.
+- [x] 2.2 Update the shared browser-pane pills/list framing and hero-pane fill/content-box primitives to consume role-named geometry without destination-owned splitting; verify `ast-grep scan` reports no frontend-boundary violation.
+- [x] 2.3 Reverse the pane ratio so the list/browser pane is the ~40% ratio-driven pane and the hero pane takes the remainder; clamp the browser width (not the hero) so neither pane drops below the shared minimum at the breakpoint; keep gap, breakpoint, min-height guard, padding, and status-row reserve; verify `cargo check -p mbv` and the suite pass.
+- [x] 2.4 Name `WideLibraryPanes` by semantic role (`hero_panel`/`browser_panel`/`hero_area`/`browser_area`) and remove the role→physical-side relabel in `wide_library_panes`; compiler-walk consumers and 1-hop bindings; verify `ast-grep scan` clean and no `left_/right_` pane names remain in `library.rs`.
+
+## 3. Adopt mirrored geometry everywhere
+
+- [x] 3.1 Update Home, generic Emby Movies/homevideos/podcasts, and Feeds Wide rendering so the canonical browser and browser-level pills paint left while the read-only hero paints right; verify existing rendered checks pass and read-only hero pointer behavior remains inert.
+- [x] 3.2 Update TV and grouped Music so their canonical browser rails paint left and their Series/episode or album/track workspaces paint right; verify existing focus, selection, Inline Search, image, and pointer checks pass without changing keyboard dispatch.
+- [x] 3.3 Update Audiobookshelf Podcast and Book so show/book browsers and pills paint left and episode/chapter workspaces paint right; verify existing breakpoint, anchor, focus, image, and pointer checks pass without changing input behavior.
+- [x] 3.4 Audit each affected Interactive Component's published paint and hit geometry so pointer targets move with their painted pane and no shell/global hit map is introduced; verify the existing mouse integration tests for affected destinations pass.
+
+## 4. Evaluate existing tests
+
+- [x] 4.1 Review every failing or renamed placement test and record in the implementation diff whether it protects a durable contract (breakpoint, status reserve, one painter, focus, target geometry, or state preservation) or only obsolete side/name details; update durable tests and delete or relax placement-only tests, adding no unit tests.
+- [x] 4.2 Run the narrowest existing component/render test groups for Home, Browser/Movies, TV, Music, Feeds, Audiobookshelf Podcast, and Audiobookshelf Book and verify they pass with no newly created test function or test file.
+
+## 5. Synchronize and verify
+
+- [x] 5.1 Sync every delta spec in this change into its matching current `openspec/specs/<capability>/spec.md`, then normalize retained scenario headings to current Wide hero vocabulary; verify `openspec validate adopt-wide-hero --strict` passes and current specs contain no active `Hero-on-left` contract.
+- [x] 5.2 Pre-push gates (cargo fmt, cargo check -p mbv, nextest, ast-grep scan) pass. check-code-file-lines flags only pre-existing media_list.rs (809, untouched by this change).
+- [x] 5.3 Waived — visual QA is the maintainer's real usage on a single-user app, not a checklist gate.

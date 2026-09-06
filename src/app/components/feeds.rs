@@ -2,7 +2,7 @@
 //!
 //! The shell supplies validated feed snapshots. This component owns the
 //! subscription/group selector and the watched filter (parent chrome); the
-//! embedded canonical controls (`WideMediaList` for hero-on-left Wide,
+//! embedded canonical controls (`WideMediaList` for Wide hero Wide,
 //! `InlineMediaBrowser` for inline Narrow) own the cursor and scroll over the
 //! grouped-entry projection. `render_feeds_content` is the parent-owned pill
 //! strip + chrome + hero painter and mounts the active control into the list
@@ -45,7 +45,7 @@ pub struct FeedsComponent {
     inline_list: InlineMediaBrowser<String>,
     watched_filter: WatchedFilter,
     selected_group: usize,
-    /// Which canonical control the last `view()` painted (hero-on-left Wide vs
+    /// Which canonical control the last `view()` painted (Wide hero Wide vs
     /// inline Narrow). Drives the single `ViewportAnchor` handoff on a
     /// breakpoint flip and which control `cursor()` reads.
     wide: bool,
@@ -423,7 +423,7 @@ impl Component for FeedsComponent {
         // outgoing control's selected target + screen-row offset into the
         // incoming control (design.md D2/D3). The cursors already track in
         // lockstep.
-        let wide = crate::app::render::shared_hero_presentation(area).is_some();
+        let wide = crate::app::render::wide_hero_presentation(area).is_some();
         if wide != self.wide {
             let viewport_height = self.layout.left_area.height.max(1) as usize;
             let anchor: Option<ViewportAnchor<String>> = if self.wide {

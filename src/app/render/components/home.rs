@@ -1,8 +1,8 @@
 use crate::app::components::media_list::{InlineMediaBrowser, WideMediaList};
 use crate::app::palette;
-use crate::app::render::arrangements::hero_left::{self, PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::arrangements::library as library_arrangement;
 use crate::app::render::arrangements::padded_rect;
+use crate::app::render::arrangements::wide_hero::{self, PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::components::hero::{self, HERO_BLOCK_EXTRA_ROWS};
 use crate::app::render::components::home_hero;
 use crate::app::render::components::home_hero::{HeroData, HomeImagePaint, KeepWatchingHeroLayout};
@@ -46,7 +46,7 @@ fn home_item_at(
 
 /// Paints Home's parent-owned hero + section pills + list-surface chrome
 /// without `App` (design D2), then mounts the active canonical control
-/// (`canonical_list` for hero-on-left Wide, `inline_list` for inline Narrow)
+/// (`canonical_list` for Wide hero Wide, `inline_list` for inline Narrow)
 /// into the list area and rebuilds the pre-#638 hit map from its exported row
 /// geometry. `section` is the already-resolved selected pill; `cursor` is the
 /// component's already-clamped flat cursor (used only to pick the hero item
@@ -102,15 +102,15 @@ pub(in crate::app) fn render_home_content(
 
     // Same threshold the library list uses to switch to two columns, so
     // Home's hero/list split and the library list cross over together.
-    let wide_panes = hero_left::shared_hero_presentation(area);
+    let wide_panes = wide_hero::wide_hero_presentation(area);
     let two_column = wide_panes.is_some();
     // Single-column Home's whole panel (content plus the shared tab
     // gutters) is painted green while focused in `render_main`, before
     // this function runs.
-    let narrow_pill_areas = hero_left::pill_bar_areas(area);
-    // Wide (hero-on-left) still pre-reserves its own pill row above
+    let narrow_pill_areas = wide_hero::pill_bar_areas(area);
+    // Wide (Wide hero) still pre-reserves its own pill row above
     // `content_area` (its pills sit at the top of the right pane, a
-    // hero-on-left concern, `hero_on_left_right_pane`). Narrow
+    // Wide hero concern, `wide_hero_browser_pane`). Narrow
     // inline presentation no longer pre-reserves anything here: its
     // pill row now lives inside `placement-neutral geometry`'s own `pills_area`,
     // outside the selected replacement, same as every other inline browser
@@ -156,21 +156,25 @@ pub(in crate::app) fn render_home_content(
     let mut hero_area_out: Option<Rect> = None;
 
     if two_column {
-        // Two-column layout: hero on left, list on right (hero-on-left,
+        // Two-column layout: hero pane and browser list (Wide hero,
         // design.md decision 4/5: the pane split and its minimum pane
         // width are the shared arrangement's, not a Home-local ratio).
-        let Some((hero_panel, right_panel)) = wide_panes else {
+        let Some(wide_hero::WideHeroPanes {
+            hero: hero_panel,
+            browser: right_panel,
+        }) = wide_panes
+        else {
             unreachable!("wide_panes is present when two_column is true");
         };
         hero_area_out = Some(hero_panel);
         let mut hero_content =
-            hero_left::hero_on_left_pane(f, area, hero_left::LeftPaneFocus::ReadOnly)
+            wide_hero::wide_hero_hero_pane(f, area, wide_hero::LeftPaneFocus::ReadOnly)
                 .expect("wide branch already confirmed shared hero presentation fits");
         let hero_col_height = hero_content.height;
 
         hero_data = match emby_item {
             Some(item) => {
-                // Shared wide hero-on-left card preparation (design.md
+                // Shared wide Wide hero card preparation (design.md
                 // decision 1): the exact same 16:9-artwork-above-metadata
                 // card the wide Movies arrangement renders, so the two
                 // cannot drift in image sizing, metadata order, or
@@ -184,7 +188,7 @@ pub(in crate::app) fn render_home_content(
                     HeroData::new(
                         Box::new(item),
                         meta_area,
-                        meta_area, // wide_area same as meta_area in hero-on-left
+                        meta_area, // wide_area same as meta_area in Wide hero
                         img_area,
                         meta_layout,
                     )
@@ -328,16 +332,16 @@ pub(in crate::app) fn render_home_content(
         list_area = content_area;
     }
 
-    // Hero-on-left's right pane: pill row at the pane's top, then the
+    // Wide hero's right pane: pill row at the pane's top, then the
     // list panel below it (design.md decision 6, shared with Music and
-    // audiobooks via `hero_left::hero_on_left_right_pane`). With no hero item
+    // audiobooks via `wide_hero::wide_hero_browser_pane`). With no hero item
     // there is no right pane at all -- pills span the full row and the
     // list takes the full width, same as the single-column layout.
     let wide_pill_section = two_column && (hero_data.is_some() || generic_hero.is_some());
     let (pills_area, spacer_area, green_panel_full): (Rect, Rect, Option<Rect>) =
         if wide_pill_section {
             let right_area = padded_rect(list_area, 0, PANE_PAD_Y);
-            let right_pane = hero_left::hero_on_left_right_pane(list_area, right_area);
+            let right_pane = wide_hero::wide_hero_browser_pane(list_area, right_area);
             (
                 right_pane.pills_area,
                 right_pane.spacer_area,
@@ -345,8 +349,8 @@ pub(in crate::app) fn render_home_content(
             )
         } else if two_column {
             // Wide layout, no hero item: same top-of-area fallback the
-            // hero-on-left pane would have used.
-            let areas = hero_left::pill_bar_areas(area);
+            // Wide hero pane would have used.
+            let areas = wide_hero::pill_bar_areas(area);
             (areas.pills_area, areas.spacer_area, None)
         } else {
             // Narrow: section pills stay outside the selected detail flow.
@@ -403,7 +407,7 @@ pub(in crate::app) fn render_home_content(
 
     let left_area = list_area;
     let mut image_paint = None;
-    // Two-column: the hero-on-left card paints independently of the list flow
+    // Two-column: the Wide hero card paints independently of the list flow
     // (its geometry was resolved above, before the pill/list split).
     if two_column {
         if let Some(hero_data) = &hero_data {
@@ -425,7 +429,7 @@ pub(in crate::app) fn render_home_content(
     // panel background, so it must run before the canonical control paints
     // the selected-row bar (matches TV / Music ordering).
     if let Some(panel) = green_panel_full {
-        hero_left::hero_on_left_list_panel_border(f, panel, focused);
+        wide_hero::wide_hero_browser_border(f, panel, focused);
     }
 
     // Paint the active canonical control into the list area. Row identity for

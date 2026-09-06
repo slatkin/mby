@@ -226,7 +226,7 @@ pub(in crate::app::render) fn render_home_latest_detail_content(
     Some(super::home_hero::HomeImagePaint::AudiobookshelfCover {
         area: Rect {
             x: area.x,
-            // Wide hero-on-left reserves artwork above metadata.
+            // Wide Wide hero reserves artwork above metadata.
             y: area.y,
             width: img_w,
             height: image_height,

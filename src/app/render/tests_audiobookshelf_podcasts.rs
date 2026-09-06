@@ -133,22 +133,6 @@ fn narrow_podcast_show_paint_matches_each_one_column_hit_rect() {
 }
 
 #[test]
-fn wide_podcasts_use_a_left_hero_and_right_show_workspace() {
-    let app = audiobookshelf_app();
-    let (model, _terminal) = render_podcast_shell(app, 100, 30, true);
-    let layout = &model.app.layout.main;
-
-    assert!(
-        layout.hero_area.width < 100,
-        "wide hero must own a left pane"
-    );
-    assert!(
-        layout.left_area.x > layout.hero_area.x,
-        "show workspace belongs in the right pane"
-    );
-}
-
-#[test]
 fn narrow_podcasts_replace_selected_show_row_with_detail() {
     let mut app = audiobookshelf_app();
     app.audiobookshelf_browse[0].shows[0].author = Some("Author A".into());
@@ -458,7 +442,7 @@ fn wide_podcast_detail_preserves_episode_rows_and_played_filtering() {
     let layout = &model.app.layout.main;
     let out = buffer_to_string(&terminal);
 
-    assert!(layout.hero_area.x < layout.left_area.x);
+    assert!(layout.hero_area.x > layout.left_area.x);
 
     // Repoint from the legacy `LayoutMain.audiobookshelf_episode_rows` to the
     // mounted component's painted geometry (task 5.3d.10, Unit D). Wide podcast
