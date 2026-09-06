@@ -327,6 +327,32 @@ fn queue_play_cursor_suppresses_stale_progress_until_player_ack() {
 }
 
 #[test]
+fn rejected_remote_queue_selection_restores_confirmed_playhead() {
+    let _guard = crate::config::TestStateDirGuard::new();
+    let mut app = make_remote_app_stub(Vec::new(), make_items(3));
+    app.set_queue_scope(QueueScope::Remote);
+    {
+        let mut status = app.player.status.lock().unwrap();
+        status.active = true;
+        status.current_idx = 0;
+        status.queue_len = 3;
+        status.position_ticks = 18_000_000_000;
+        status.runtime_ticks = 24_000_000_000;
+    }
+
+    // The stub's ctrl receiver is dropped, so the Player owner rejects this
+    // selection instead of acknowledging the predicted playhead.
+    app.dispatch(crate::app::action::Command::QueuePlayCursor(2));
+
+    assert_eq!(app.playhead.confidence, PlayheadConfidence::Confirmed);
+    let playback = app.effective_playback_state();
+    assert_eq!(playback.active_idx, 0);
+    assert_eq!(playback.position_ticks, 18_000_000_000);
+    assert_eq!(playback.runtime_ticks, 24_000_000_000);
+    assert_eq!(app.status, "Playback owner rejected the queue selection");
+}
+
+#[test]
 fn resolve_slot_at_maps_index_to_slot_and_rejects_out_of_range() {
     let tab = PlayerTab::from_emby_items(make_items(3), 0);
     let s0 = tab.queue.slots()[0].slot_id;

@@ -515,6 +515,8 @@ impl App {
                                 .player
                                 .queue_play_slot(mbv_core::ctrl::slot_id_to_u64(slot_id))
                             {
+                                self.playhead.confidence = PlayheadConfidence::Confirmed;
+                                self.playhead.slot = current_idx;
                                 self.flash(
                                     "Playback owner rejected the queue selection".into(),
                                     ToastSeverity::Error,
