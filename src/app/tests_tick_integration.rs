@@ -439,6 +439,78 @@ fn ctrl_a_on_inline_search_result_enqueues_that_result_through_live_tick() {
     );
 }
 
+/// Enter on an album result in Inline Search returns to the standard Music
+/// library presentation through a real `Application::tick()`: the search is
+/// dismissed and the activated album's track-selection mode is enabled.
+#[test]
+fn enter_on_inline_search_album_result_dismisses_search_and_enters_track_focus() {
+    let (mut harness, id) = wide_music_harness();
+
+    harness.inject(key(Key::Char('/')));
+    harness.step();
+    assert!(harness.model().active_inline_search_is_open());
+
+    // A ready album index whose entry matches the seeded result row: Enter
+    // resolves the album through the recursive-activation path.
+    let mut album = crate::app::tests::make_item("First Album", "MusicAlbum");
+    album.id = "album-1".into();
+    harness.model_mut().app.album_indexes.insert(
+        "lib-music".into(),
+        crate::app::AlbumIndexState::Ready(vec![crate::app::AlbumSearchEntry {
+            album: album.clone(),
+            ancestors: Vec::new(),
+            display_label: "First Album".into(),
+            search_text: "first album".into(),
+        }]),
+    );
+    {
+        let workspace = harness
+            .model_mut()
+            .application
+            .get_component_mut(&id)
+            .expect("Music workspace mounted")
+            .as_any_mut()
+            .downcast_mut::<MusicWorkspaceComponent>()
+            .expect("Music workspace type");
+        workspace
+            .inline_search_mut()
+            .set_pool(SearchPool::Albums(vec![crate::app::AlbumSearchEntry {
+                album,
+                ancestors: Vec::new(),
+                display_label: "First Album".into(),
+                search_text: "first album".into(),
+            }]));
+    }
+
+    harness.inject(key(Key::Enter));
+    let outcome = harness.step();
+    assert!(
+        outcome.messages.iter().any(|msg| matches!(
+            msg,
+            Msg::Shell(ShellRequest::InlineSearchActivate { id, .. }) if id == "album-1"
+        )),
+        "Enter emits an activation request for the selected album result: {:?}",
+        outcome.messages
+    );
+    let (mut music_resize, mut tv_resize) = (false, false);
+    for message in outcome.messages {
+        harness
+            .model_mut()
+            .handle_terminal_message(message, &mut music_resize, &mut tv_resize);
+    }
+    harness.model_mut().sync_mounted_surfaces();
+
+    assert!(
+        !harness.model().active_inline_search_is_open(),
+        "Enter on an album result dismisses Inline Search"
+    );
+    assert_eq!(
+        music_track_cursor(&harness, &id),
+        Some(0),
+        "the activated album enters track-selection mode"
+    );
+}
+
 /// Blocking-overlay focus loss and restoration through live `Application::tick()`:
 /// raising a blocking confirm modal moves keyboard delivery off the focused
 /// Queue; dismissing it the production way restores Queue focus with no

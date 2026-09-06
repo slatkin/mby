@@ -273,6 +273,18 @@ impl Model {
             };
             if let Some(entry) = entry {
                 self.app.activate_recursive_album(lib_idx, entry);
+                // Enter on an album result returns to the standard library
+                // presentation: dismiss Inline Search and request the Music
+                // workspace re-anchor onto the activated album and enter
+                // track-selection mode at the next sync. The async
+                // `RecursiveAlbumActivated` event refines the nav stack to the
+                // album's natural pill/list position and re-sends the same
+                // one-shot requests (shell_run.rs) once it lands.
+                self.music_workspace_reanchor = true;
+                self.music_track_focus_request = Some(true);
+                self.dismiss_active_inline_search();
+                self.push_music_workspace_content();
+                return;
             }
         } else if let Some(item) =
             selected.filter(|item| item.id == id && item.item_type == item_type)
