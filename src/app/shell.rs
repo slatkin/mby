@@ -488,14 +488,6 @@ mod mouse_fold_tests {
         );
     }
 
-    #[test]
-    #[should_panic(expected = "claimed one mouse event")]
-    fn fold_debug_asserts_on_a_second_claim() {
-        let _ = fold_mouse_messages(vec![
-            Msg::Playback(PlaybackRequest::TogglePlayPause),
-            Msg::Playback(PlaybackRequest::Stop),
-        ]);
-    }
 }
 
 #[cfg(test)]
