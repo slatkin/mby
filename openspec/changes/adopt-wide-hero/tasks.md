@@ -2,7 +2,7 @@
 
 - [x] 1.1 Update `CONTEXT.md` so `Wide hero` replaces `Hero-on-left`, defines the left browser/right hero arrangement, and preserves `Inline hero`; verify the current presentation section contains no `Hero-on-left` term.
 - [x] 1.2 Add an ADR that supersedes ADR 0021 with the Wide hero/Inline hero decision and leaves accepted historical ADR and archived OpenSpec files unchanged; verify ADR links and supersession text resolve correctly.
-- [ ] 1.3 Rename current crate-private `hero_on_left` modules, functions, types, fields, and comments to semantic `wide_hero`, `browser`, and `hero/workspace` names without compatibility aliases; verify `rg 'hero_on_left|Hero-on-left' src CONTEXT.md docs/adr openspec/specs` reports only explicitly retained historical references.
+- [x] 1.3 Rename current crate-private `hero_on_left` modules, functions, types, fields, and comments to semantic `wide_hero`, `browser`, and `hero/workspace` names without compatibility aliases; verify `rg 'hero_on_left|Hero-on-left' src CONTEXT.md docs/adr openspec/specs` reports only explicitly retained historical references.
 
 ## 2. Mirror the shared arrangement
 
