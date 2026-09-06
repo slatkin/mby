@@ -18,8 +18,8 @@
 
 ## 4. Evaluate existing tests
 
-- [ ] 4.1 Review every failing or renamed placement test and record in the implementation diff whether it protects a durable contract (breakpoint, status reserve, one painter, focus, target geometry, or state preservation) or only obsolete side/name details; update durable tests and delete or relax placement-only tests, adding no unit tests.
-- [ ] 4.2 Run the narrowest existing component/render test groups for Home, Browser/Movies, TV, Music, Feeds, Audiobookshelf Podcast, and Audiobookshelf Book and verify they pass with no newly created test function or test file.
+- [x] 4.1 Review every failing or renamed placement test and record in the implementation diff whether it protects a durable contract (breakpoint, status reserve, one painter, focus, target geometry, or state preservation) or only obsolete side/name details; update durable tests and delete or relax placement-only tests, adding no unit tests.
+- [x] 4.2 Run the narrowest existing component/render test groups for Home, Browser/Movies, TV, Music, Feeds, Audiobookshelf Podcast, and Audiobookshelf Book and verify they pass with no newly created test function or test file.
 
 ## 5. Synchronize and verify
 
