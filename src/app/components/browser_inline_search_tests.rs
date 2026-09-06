@@ -155,4 +155,23 @@ fn emby_browser_wide_right_rail_paints_inline_search() {
         1,
         "search-bar-to-row gesture selects the row it ends on"
     );
+
+    // A right click on the first result row moves the cursor there and asks
+    // the host to open its ordinary item-based context menu for that result
+    // (P1: context-menu actions stay available while search is open).
+    let message = browser.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Right),
+        column: list_area.x,
+        row: list_area.y,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert_eq!(browser.inline_search().cursor(), 0);
+    assert!(
+        matches!(
+            message,
+            Some(Msg::Shell(ShellRequest::BrowserContextMenu { ref item }))
+                if item.name == "Search Result Alpha"
+        ),
+        "right click on a result row opens its context menu: {message:?}"
+    );
 }

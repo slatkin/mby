@@ -8,7 +8,9 @@ use ratatui::backend::TestBackend;
 use ratatui::layout::Rect;
 use ratatui::Terminal;
 use tuirealm::component::{AppComponent, Component};
-use tuirealm::event::{Event, Key, KeyEvent, KeyModifiers};
+use tuirealm::event::{
+    Event, Key, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
 fn context(track_cursor: Option<usize>) -> MusicWideRenderCtx {
     let album = make_item("First Album", "MusicAlbum");
     let mut track = make_item("Track One", "Audio");
@@ -692,6 +694,48 @@ fn music_workspace_wide_search_hides_grouped_rows_and_paints_flat_results() {
         }
     }
     assert!(hero_painted, "Hero pane remains visible during search");
+}
+
+/// A right click on an Inline Search result row moves the search cursor there
+/// and asks the host to open its ordinary item-based context menu for that
+/// result (P1: context-menu actions stay available while search is open).
+#[test]
+fn music_workspace_search_right_click_on_result_opens_context_menu() {
+    let mut component = MusicWorkspaceComponent::new();
+    component.set_focused(true);
+    component.set_content(grouped_context(0, vec![0, 1, 2, 3], None));
+
+    component.on(&Event::Keyboard(KeyEvent {
+        code: Key::Char('/'),
+        modifiers: KeyModifiers::NONE,
+    }));
+    component
+        .inline_search_mut()
+        .set_pool(SearchPool::Items(vec![make_item(
+            "Zeta Album Match",
+            "MusicAlbum",
+        )]));
+
+    let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
+    terminal
+        .draw(|frame| component.view(frame, frame.area()))
+        .unwrap();
+    let list_area = component.inline_search().layout().left_area;
+
+    let message = component.on(&Event::Mouse(MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Right),
+        column: list_area.x,
+        row: list_area.y,
+        modifiers: KeyModifiers::NONE,
+    }));
+    assert!(
+        matches!(
+            message,
+            Some(Msg::Shell(ShellRequest::EmbyLibraryContextMenu { ref item }))
+                if item.name == "Zeta Album Match"
+        ),
+        "right click on a result row opens its context menu: {message:?}"
+    );
 }
 
 /// Dismissing search restores the prior album position (design.md D4):

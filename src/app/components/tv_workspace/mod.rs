@@ -14,7 +14,7 @@ use tuirealm::state::State;
 
 use mbv_core::api::{EmbyItem, TICKS_PER_SECOND};
 
-use super::inline_search::{InlineSearch, InlineSearchHost};
+use super::inline_search::{InlineSearch, InlineSearchHost, InlineSearchMouse};
 use super::media_list::{MediaKind, MediaListRow, MediaSemanticState, WideMediaList};
 use super::mouse::gesture::{MouseGesture, MouseGestureState};
 use super::mouse::hit::HitRegions;
@@ -393,8 +393,13 @@ impl TvWorkspaceComponent {
         // is painted over the same area the series rail would occupy, so
         // the rail never mutates for points there.
         if self.inline_search.is_active() {
-            self.inline_search.handle_mouse(mouse);
-            return None;
+            return match self.inline_search.handle_mouse(mouse) {
+                Some(InlineSearchMouse::ContextMenu) => self
+                    .inline_search
+                    .selected_item()
+                    .map(|item| Msg::Shell(ShellRequest::EmbyLibraryContextMenu { item })),
+                None => None,
+            };
         }
         // TV does not consume hover-move (design.md D7).
         if matches!(mouse.kind, MouseEventKind::Moved) {
