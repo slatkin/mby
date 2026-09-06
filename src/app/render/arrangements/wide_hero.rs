@@ -19,7 +19,7 @@ pub(in crate::app::render) const WIDE_HERO_MIN_AREA_HEIGHT: u16 = 6;
 const WIDE_HERO_MIN_PANE_WIDTH: u16 = 40;
 /// Empty columns separating the Wide hero arrangement's two panes.
 const WIDE_HERO_PANE_GAP: u16 = 2;
-/// Height of the pill row at the top of the Wide hero arrangement's right
+/// Height of the pill row at the top of the Wide hero arrangement's left
 /// (list) pane.
 const WIDE_HERO_PILLS_ROW_HEIGHT: u16 = 1;
 /// Blank rows below the pill row before the list starts.
@@ -43,8 +43,9 @@ pub(in crate::app) const PANE_PAD_Y: u16 = 1;
 /// on `wide_hero_browser_pane`) — doing so double-subtracts and shifts the
 /// screen a second row.
 ///
-/// Geometry is returned by semantic role: `hero` is the ~40% hero/workspace
-/// pane on the right, `browser` is the larger list pane on the left.
+/// Geometry is returned by semantic role: `hero` is the larger (~60%)
+/// hero/workspace pane on the right, `browser` is the ~40% list pane on the
+/// left.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::app) struct WideHeroPanes {
     pub browser: Rect,
@@ -119,16 +120,22 @@ mod tests {
 }
 
 /// Returns `(browser_pane, hero_pane)` for the Wide hero arrangement's
-/// horizontal split: a `WIDE_HERO_PANE_GAP`-column gutter between the larger
-/// left (list) browser pane and a ~40%-width right (hero) pane, each floored
-/// at `WIDE_HERO_MIN_PANE_WIDTH`.
+/// horizontal split: a `WIDE_HERO_PANE_GAP`-column gutter between a
+/// ~40%-width browser (list) pane on the left and the larger hero pane
+/// taking the remainder on the right, each floored at
+/// `WIDE_HERO_MIN_PANE_WIDTH`.
 pub(in crate::app::render) fn wide_hero_split(content_area: Rect) -> (Rect, Rect) {
-    let hero_w = ((content_area.width as u32 * 2 / 5) as u16)
+    let browser_w = ((content_area.width as u32 * 2 / 5) as u16)
         .max(WIDE_HERO_MIN_PANE_WIDTH)
-        .min(content_area.width.saturating_sub(WIDE_HERO_MIN_PANE_WIDTH));
-    let browser_w = content_area
+        .min(
+            content_area
+                .width
+                .saturating_sub(WIDE_HERO_MIN_PANE_WIDTH)
+                .saturating_sub(WIDE_HERO_PANE_GAP),
+        );
+    let hero_w = content_area
         .width
-        .saturating_sub(hero_w)
+        .saturating_sub(browser_w)
         .saturating_sub(WIDE_HERO_PANE_GAP);
     (
         Rect {
@@ -146,7 +153,7 @@ pub(in crate::app::render) fn wide_hero_split(content_area: Rect) -> (Rect, Rect
     )
 }
 
-/// The Wide hero arrangement's right (list) pane geometry: a one-row pill
+/// The Wide hero arrangement's left (list) pane geometry: a one-row pill
 /// bar flush with the pane's top, then the list panel below it (decision
 /// 6's "pill row at top of list pane"). `right_panel` is the pane's full
 /// rect (its `y`/`height` anchor the pill row and the panel's bottom);

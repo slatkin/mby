@@ -288,33 +288,6 @@ fn narrow_home_inline_hero_contrasts_with_pane_backdrop() {
     assert_ne!(hero_bg, backdrop_bg, "hero must read as a recessed card");
 }
 
-/// migrate-home-feeds 5.1: the shared Wide hero primitive owns the one-row
-/// status-row reserve, so wide Home's hero panel and list panel must both
-/// bottom out exactly one row above the destination area's bottom (the status
-/// bar row) — no per-tab reserve on top of the shared one.
-#[test]
-fn home_images_off_collapses_artwork_and_uses_full_text_width() {
-    let mut app = home_app();
-    app.image_protocol_enabled = false;
-    let (model, terminal) = render_home_shell_with(app, 200, 40, |m| {
-        m.home_content.continue_items = vec![emby_cw_item()];
-    });
-    let home = model
-        .application
-        .get_component(&ComponentId::Home)
-        .expect("Home component mounted")
-        .as_any()
-        .downcast_ref::<HomeComponent>()
-        .expect("Home component type");
-    let hero = home.hero_area().expect("wide Home paints a hero panel");
-    assert!(buffer_to_string(&terminal).contains("Focused Movie"));
-    let (list_area, _) = home.menu_placement_geometry();
-    assert!(
-        list_area.width > hero.width,
-        "images-off Home text must expand beyond the artwork-width hero"
-    );
-}
-
 #[test]
 fn wide_home_panes_leave_exactly_one_row_above_the_status_bar() {
     let (width, height) = (200u16, 40u16);

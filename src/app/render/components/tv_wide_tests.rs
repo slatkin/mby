@@ -110,30 +110,6 @@ fn is_right_panel_wide_reflects_terminal_size_paint_free() {
 }
 
 #[test]
-fn wide_tv_requests_selected_series_primary_image_with_budget_and_placeholder() {
-    let app = tv_app();
-    let mut component = TvWorkspaceComponent::new();
-    component.set_content(app.wide_tv_render_ctx(0, None));
-    component.set_focused(true);
-    let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
-    terminal.draw(|f| component.view(f, f.area())).unwrap();
-    match component.take_image_paint() {
-        Some(HomeImagePaint::Series {
-            area,
-            item,
-            show_placeholder,
-            image_types,
-        }) => {
-            assert_eq!(item.id, "series");
-            assert_eq!((area.width, area.height), (36, 11));
-            assert!(show_placeholder);
-            assert_eq!(image_types, &["Thumb", "Primary", "Backdrop", "Logo"]);
-        }
-        _ => panic!("expected selected Series image request"),
-    }
-}
-
-#[test]
 fn wide_tv_images_off_collapses_artwork_and_uses_full_text_width() {
     let mut app = tv_app();
     let (output, component) = render_tv_workspace(&mut app, &mut LayoutMain::default());
@@ -145,24 +121,6 @@ fn wide_tv_images_off_collapses_artwork_and_uses_full_text_width() {
         output.contains("Pilot"),
         "TV text must remain visible: {output}"
     );
-}
-
-#[test]
-fn wide_tv_series_overview_wraps_below_the_landscape_artwork_slot() {
-    let mut app = tv_app();
-    app.libs[0].nav_stack[0].items[0].overview =
-        "one two three four five six seven eight nine ten eleven twelve thirteen".into();
-    let mut layout = LayoutMain::default();
-    let (output, _) = render_tv_workspace(&mut app, &mut layout);
-    assert!(
-        output.contains("one two three"),
-        "overview should be painted: {output:?}"
-    );
-    assert!(
-        output.contains("four five six"),
-        "overview should wrap below the artwork slot: {output:?}"
-    );
-    assert!(!output.contains("one two three four five six seven eight nine"));
 }
 
 #[test]

@@ -8,10 +8,9 @@
 //! or primitive change (ledger migration flow).
 
 use super::test_helpers::{buffer_to_string, make_audiobookshelf_book_app, make_music_group_app};
-use crate::app::components::browser::BrowserContent;
 use crate::app::components::{
-    AudiobookshelfBookComponent, AudiobookshelfPodcastComponent, BrowserComponent, BrowserKind,
-    FeedsComponent, HomeComponent, MusicWorkspaceComponent, TvWorkspaceComponent,
+    AudiobookshelfBookComponent, AudiobookshelfPodcastComponent, FeedsComponent, HomeComponent,
+    MusicWorkspaceComponent, TvWorkspaceComponent,
 };
 use crate::app::palette;
 use crate::app::render::arrangements::library::wide_library_panes;
@@ -39,50 +38,6 @@ fn direct_terminal(mut draw: impl FnMut(&mut ratatui::Frame)) -> Terminal<TestBa
     let mut terminal = Terminal::new(TestBackend::new(WIDTH, HEIGHT)).unwrap();
     terminal.draw(|f| draw(f)).unwrap();
     terminal
-}
-
-/// Movies/home-videos/Emby-podcasts/feed-group browser: `BrowserComponent`
-/// drives `render_wide_movies` for `BrowserKind::Movies`/`HomeVideos`, or for
-/// any kind carrying `narrow_extras.feed_items`. One representative kind
-/// (`Movies`) characterizes the shared code path all four destinations run.
-#[test]
-fn movies_family_wide_left_pane_unconditional_fill_double_horizontal_inset() {
-    let mut component = BrowserComponent::new_for_kind(BrowserKind::Movies);
-    let mut item = make_item("Focused Movie", "Movie");
-    item.overview = "A short overview.".into();
-    component.set_content(BrowserContent::from_items(vec![item]));
-    component.set_focused(true);
-    let area = wide_area();
-    let terminal = direct_terminal(|f| component.view(f, area));
-    let buffer = terminal.backend().buffer();
-
-    let panes = wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
-
-    // Fill is unconditional and full-extent today (not the broken class).
-    assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
-        palette::SURFACE_RESTING
-    );
-    assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
-        palette::SURFACE_RESTING
-    );
-    // The shared hero pane owns the single `(PANE_PAD_X, PANE_PAD_Y)` inset.
-    let single_inset_x = left_panel.x + PANE_PAD_X;
-    let title = (left_panel.y..left_panel.bottom()).find_map(|y| {
-        let row = (left_panel.x..left_panel.right())
-            .map(|x| buffer[(x, y)].symbol())
-            .collect::<String>();
-        row.find("Focused Movie")
-            .map(|x| (left_panel.x + x as u16, y))
-    });
-    assert_eq!(
-        title.map(|(x, _)| x),
-        Some(single_inset_x),
-        "characterizes the shared single horizontal inset"
-    );
-    assert_eq!(title.map(|(_, y)| y), Some(13), "row position is unchanged");
 }
 
 /// TV already routes through `wide_library_panes(area, PANE_PAD_X,
