@@ -28,7 +28,7 @@ use super::user_event::UserEvent;
 use crate::app::layout::LayoutMain;
 use crate::app::library_column_width::{library_cell_width, LIBRARY_COLUMN_GAP};
 use crate::app::render::{
-    effective_sort_str, letter_bucket, shared_hero_presentation, HomeImagePaint,
+    effective_sort_str, letter_bucket, wide_hero_presentation, HomeImagePaint,
 };
 use crate::app::ui_util::natural_sort_key;
 
@@ -55,7 +55,7 @@ pub struct BrowserComponent {
     focused: bool,
     layout: LayoutMain,
     /// Whether the component's own BrowserKey kind and painted geometry select
-    /// the hero-on-left layout. The value is derived in `view()` rather than
+    /// the Wide hero layout. The value is derived in `view()` rather than
     /// projected from the App layout.
     wide_movies: bool,
     /// Whether the wide layout's pill row is a home-video count label (vs. a
@@ -79,7 +79,7 @@ pub struct BrowserComponent {
     narrow_extras: NarrowBrowseExtras,
     pending_anchor: Option<ViewportAnchor<String>>,
     preserved_anchor: Option<ViewportAnchor<String>>,
-    /// Persistent canonical control for the applicable Hero-on-left Wide rails
+    /// Persistent canonical control for the applicable Wide hero Wide rails
     /// (Movies, home-video feed view). Fed from `set_content`, painted by
     /// `render_wide_movies`. Targets are item indices into `context.items`
     /// (Browser's existing typed row identity); task 3.7 removes the mirrored
@@ -606,7 +606,7 @@ impl Component for BrowserComponent {
         // receiving control consumes it on this or the next frame.
         let wide = (matches!(self.kind, BrowserKind::Movies | BrowserKind::HomeVideos)
             || self.narrow_extras.feed_items.is_some())
-            && shared_hero_presentation(area).is_some();
+            && wide_hero_presentation(area).is_some();
         let switching_controls = wide != self.wide_movies;
         if switching_controls {
             if let Some(anchor) = self.active_viewport_anchor(self.painted_viewport_height()) {
@@ -654,7 +654,7 @@ impl Component for BrowserComponent {
             context = feed
                 .with_cursor_scroll(self.cursor.min(items.len().saturating_sub(1)), self.scroll);
         }
-        // Task 5.3d.17a: when the wide Movies/home-video hero-on-left layout
+        // Task 5.3d.17a: when the wide Movies/home-video Wide hero layout
         // is active (this component's own `kind` AND the area is wide enough
         // for the shared split), paint the full hero + pills + list layout
         // itself instead of just the inner list rows; otherwise keep the
@@ -673,7 +673,7 @@ impl Component for BrowserComponent {
             let list_area = if self.narrow_extras.show_letter_pills
                 || self.narrow_extras.feed_items.is_some()
             {
-                let areas = crate::app::render::arrangements::hero_left::pill_bar_areas(area);
+                let areas = crate::app::render::arrangements::wide_hero::pill_bar_areas(area);
                 if self.narrow_extras.feed_items.is_some() {
                     crate::app::render::paint_feed_group_pills_row(
                         frame,

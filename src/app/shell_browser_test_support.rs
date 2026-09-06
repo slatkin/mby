@@ -46,7 +46,7 @@ pub(super) fn render_browser_model(model: &mut Model, width: u16, height: u16) {
 }
 
 /// A generic (non-Movies) Emby library with `n` flat Movie items: below
-/// the 82-column breakpoint it never takes the wide-Movies hero-on-left
+/// the 82-column breakpoint it never takes the wide-Movies Wide hero
 /// rail, so whatever column count the painted pane derives is the plain
 /// flat-list stride for both the App and the mounted browser.
 pub(super) fn browser_app_with_flat_movies(n: usize) -> App {

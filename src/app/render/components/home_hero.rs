@@ -39,7 +39,7 @@ pub(in crate::app::render) struct HeroMetaBlock {
     pub meta_rows: Vec<Vec<Span<'static>>>,
 }
 
-/// Prepares a wide (hero-on-left) selected-Emby hero card from `item`,
+/// Prepares a wide (Wide hero) selected-Emby hero card from `item`,
 /// sized into the given content area (the left pane's inner rect after
 /// padding). Returns the data needed to build `HeroData::Emby`, or `None`
 /// when the area is too small for a usable card (image and metadata).
@@ -49,7 +49,7 @@ pub(in crate::app::render) struct HeroMetaBlock {
 /// release date, duration, overview) below it. The metadata layout uses the
 /// full content width for both narrow and wide wrapping (no wrap-around
 /// split — the image sits above text, not beside it), matching Home's wide
-/// hero-on-left presentation.
+/// Wide hero presentation.
 pub(in crate::app) fn prepare_wide_emby_hero_card(
     item: &mbv_core::api::EmbyItem,
     content_area: Rect,
@@ -88,7 +88,7 @@ pub(in crate::app) fn prepare_wide_emby_hero_card(
         height: image_height,
     };
     let img_area =
-        super::super::arrangements::hero_left::hero_artwork_slot(img_area, images_enabled);
+        super::super::arrangements::wide_hero::hero_artwork_slot(img_area, images_enabled);
     let meta_y = img_area.map_or(content_area.y, |area| area.bottom() + 1);
     let meta_area = Rect {
         x: content_area.x,
@@ -466,7 +466,7 @@ pub(in crate::app::render) fn hero_text_layout(
             overview_lines.len() as u16
                 + 1 // overview lines + bottom pad
                 + if overview_pad > 0 {
-                    1 // gap row above the hero-on-left overview box
+                    1 // gap row above the Wide hero overview box
                 } else {
                     0
                 }

@@ -1,5 +1,5 @@
-use super::hero_left::{hero_artwork_slot, PANE_PAD_X, PANE_PAD_Y};
 use super::padded_rect;
+use super::wide_hero::{hero_artwork_slot, PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::components::album_art::{INLINE_ALBUM_ART_RESERVED, INLINE_ALBUM_ART_ROWS};
 use ratatui::layout::Rect;
 

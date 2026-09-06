@@ -307,7 +307,7 @@ fn wide_movies_selected_row_punches_through_to_the_resting_surface() {
     assert_eq!(selected, body, "unfocused rail shows no selection bar");
 }
 
-/// migrate-home-feeds 5.1 (§5 geometry test): the shared hero-on-left
+/// migrate-home-feeds 5.1 (§5 geometry test): the shared Wide hero
 /// primitive owns the one-row status-bar reserve, so wide Movies' framed list
 /// panel paints its `▁` bottom border two rows above the destination area's
 /// bottom, leaving exactly one blank row before the status bar. Asserted

@@ -516,8 +516,8 @@ fn feed_home_video_group_narrow_uses_shared_inline_hero() {
 }
 
 #[test]
-fn feed_home_video_group_wide_uses_hero_on_left() {
-    // Wide: hero-on-left. Selected item's detail (overview + meta) is the
+fn feed_home_video_group_wide_uses_wide_hero() {
+    // Wide: Wide hero. Selected item's detail (overview + meta) is the
     // left hero card; the right rail is a plain one-column list with the
     // feed-group pills - no inline expansion in the rail.
     let output = feed_snapshot(140, 40);
@@ -665,7 +665,7 @@ fn feed_home_video_group_metadata_free_selected_row_stays_ordinary() {
 
 /// Characterization (task 3.5b template step a): pins the painted WIDE Emby
 /// podcast browse surface through the full `Model::draw_frame` path, at a
-/// wide+tall size where `shared_hero_presentation` returns `Some`. The
+/// wide+tall size where `wide_hero_presentation` returns `Some`. The
 /// pre-change baseline (committed with this test) was BLANK: `render_list`'s
 /// hero-presentation early return fired for podcast libraries and returned
 /// before anything published `layout.left_area`, and no podcast wide-workspace

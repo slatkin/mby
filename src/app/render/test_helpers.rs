@@ -391,9 +391,9 @@ pub fn render_view(app: &mut App, width: u16, height: u16) -> LayoutMain {
     render_view_to_terminal(app, width, height).1
 }
 
-/// Assert, against a *painted* buffer, that a hero-on-left list pane leaves
+/// Assert, against a *painted* buffer, that a Wide hero list pane leaves
 /// exactly one blank row between its framed bottom border and the status-bar
-/// row that `shared_hero_presentation` reserves (migrate-home-feeds slice 3.2
+/// row that `wide_hero_presentation` reserves (migrate-home-feeds slice 3.2
 /// §5.1). This is the per-family §5 geometry check: re-derived layout rects
 /// cannot catch a one-row vertical shift, so it reads the glyphs instead.
 ///

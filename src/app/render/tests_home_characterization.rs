@@ -288,7 +288,7 @@ fn narrow_home_inline_hero_contrasts_with_pane_backdrop() {
     assert_ne!(hero_bg, backdrop_bg, "hero must read as a recessed card");
 }
 
-/// migrate-home-feeds 5.1: the shared hero-on-left primitive owns the one-row
+/// migrate-home-feeds 5.1: the shared Wide hero primitive owns the one-row
 /// status-row reserve, so wide Home's hero panel and list panel must both
 /// bottom out exactly one row above the destination area's bottom (the status
 /// bar row) — no per-tab reserve on top of the shared one.

@@ -1,5 +1,5 @@
-//! Characterization tests (task 1.1, standardize-hero-on-left-pane): pin the
-//! *current* Wide left-pane output of all seven hero-on-left destinations
+//! Characterization tests (task 1.1, standardize-Wide hero-pane): pin the
+//! *current* Wide left-pane output of all seven Wide hero destinations
 //! before any paint/primitive change lands. These intentionally capture
 //! today's drifted behaviour (the Home clamp, ABS Podcasts' missing fill, ABS
 //! Books' foreground-only `.style(Color)` bug, Feeds' conditional fill) as-is
@@ -14,8 +14,8 @@ use crate::app::components::{
     FeedsComponent, HomeComponent, MusicWorkspaceComponent, TvWorkspaceComponent,
 };
 use crate::app::palette;
-use crate::app::render::arrangements::hero_left::{PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::arrangements::library::wide_library_panes;
+use crate::app::render::arrangements::wide_hero::{PANE_PAD_X, PANE_PAD_Y};
 use crate::app::render::components::list_rows::LibraryListRenderCtx;
 use crate::app::render::TvWideRenderCtx;
 use crate::app::tests::make_item;
@@ -313,7 +313,7 @@ fn feeds_wide_left_pane_fills_unconditionally_with_no_selection() {
 }
 
 /// Feeds with no entries to select: `feeds.rs:170-184` returns before the
-/// hero-on-left pane is ever reached (a placeholder message paints instead),
+/// Wide hero pane is ever reached (a placeholder message paints instead),
 /// so no `hero_area` is published at all -- the broken empty-selection state
 /// task 2.3 fixes (D1: an unconditional pane fill even with nothing
 /// selected).
@@ -336,7 +336,7 @@ fn feeds_wide_left_pane_unfilled_with_no_selected_entry() {
 }
 
 /// ABS Books (task 2.2): the `.style(Color)` foreground-only bug is fixed --
-/// the wide left pane is filled via `hero_on_left_pane`, focus-green
+/// the wide left pane is filled via `wide_hero_hero_pane`, focus-green
 /// (`LeftPaneFocus::Workspace`) only when a chapter is selected while
 /// focused.
 #[test]
@@ -377,7 +377,7 @@ fn abs_books_wide_left_pane_fills_via_shared_primitive() {
     );
 }
 
-/// ABS Podcasts (task 2.1): the wide left pane fills via `hero_on_left_pane`.
+/// ABS Podcasts (task 2.1): the wide left pane fills via `wide_hero_hero_pane`.
 /// D8's gain: this surface goes focus-green when the episode workspace holds
 /// focus (mirroring TV), not a bare `focused`.
 #[test]
@@ -444,7 +444,7 @@ fn abs_podcast_wide_hero_keeps_text_with_images_on_or_off() {
 
 /// Sanity: the fixture width used throughout this module clears the shared
 /// two-column breakpoint, so every characterization above exercises the Wide
-/// hero-on-left presentation rather than falling back to narrow.
+/// Wide hero presentation rather than falling back to narrow.
 #[test]
 fn fixture_width_is_wide() {
     const { assert!(WIDTH >= TWO_COLUMN_THRESHOLD) };

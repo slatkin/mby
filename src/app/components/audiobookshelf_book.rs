@@ -11,7 +11,7 @@ use super::mouse::gesture::{MouseGesture, MouseGestureState};
 use super::msg::{AudiobookshelfBookIntent, AudiobookshelfBookMove, Msg, ShellRequest};
 use super::user_event::UserEvent;
 use crate::app::render::{
-    render_audiobookshelf_book_content, shared_hero_presentation, AudiobookshelfBookGeometry,
+    render_audiobookshelf_book_content, wide_hero_presentation, AudiobookshelfBookGeometry,
     BookInteraction, HomeImagePaint,
 };
 use crate::app::types_audiobookshelf_browse::AudiobookshelfBookBrowseState;
@@ -422,11 +422,11 @@ impl Default for AudiobookshelfBookComponent {
 
 impl Component for AudiobookshelfBookComponent {
     fn view(&mut self, frame: &mut Frame, area: Rect) {
-        // Chapter focus belongs only to the rendered wide hero-on-left
+        // Chapter focus belongs only to the rendered wide Wide hero
         // presentation. Clear it before painting a narrow frame so a
         // wide→narrow resize cannot leave keyboard input targeting a hidden
         // chapter pane.
-        let wide = shared_hero_presentation(area).is_some();
+        let wide = wide_hero_presentation(area).is_some();
         self.chapters_visible = wide;
         if !self.chapters_visible {
             self.chapter_selection = None;

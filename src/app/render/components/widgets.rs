@@ -553,25 +553,21 @@ impl App {
                     // before its view replaces this legacy frame.
                     if self.is_music_group_view(lib_idx)
                         && self.is_viewing_album_folders(lib_idx)
-                        && crate::app::render::arrangements::hero_left::shared_hero_presentation(
-                            area,
-                        )
-                        .is_some()
+                        && crate::app::render::arrangements::wide_hero::wide_hero_presentation(area)
+                            .is_some()
                     {
                         let ctx = self.wide_music_render_ctx(lib_idx, cursor_scroll);
                         ctx.publish_geometry(area, layout);
                     }
                     // Wide TV's mounted `TvWorkspaceComponent` paints the
-                    // whole hero-on-left workspace itself (task 5.3d.18d);
+                    // whole Wide hero workspace itself (task 5.3d.18d);
                     // the legacy wide-TV branch is gone. We only publish the
                     // hand-off `tv_wide_*` rects here before `render_list` so
                     // input routing (`App::wide_tv_library_area`) and the
                     // shell's render seam can locate them.
                     if self.is_wide_tv_library(lib_idx)
-                        && crate::app::render::arrangements::hero_left::shared_hero_presentation(
-                            area,
-                        )
-                        .is_some()
+                        && crate::app::render::arrangements::wide_hero::wide_hero_presentation(area)
+                            .is_some()
                     {
                         let ctx = self.wide_tv_render_ctx(lib_idx, cursor_scroll);
                         ctx.publish_geometry(area, layout);

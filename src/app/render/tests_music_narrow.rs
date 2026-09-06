@@ -381,7 +381,7 @@ fn narrow_music_applies_the_flip_anchor_at_the_content_viewport_height() {
     // re-clamp does not mask the difference.
     use crate::app::components::media_list::{InlineMediaBrowser, ViewportAnchor};
     use crate::app::layout::LayoutMain;
-    use crate::app::render::arrangements::hero_left::pill_bar_areas;
+    use crate::app::render::arrangements::wide_hero::pill_bar_areas;
 
     let app = multi_artist_app();
     let lib_idx = app.tab.emby_library_index().unwrap();

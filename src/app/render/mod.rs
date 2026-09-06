@@ -47,15 +47,15 @@ pub(in crate::app) use screens::feeds_model::{
     current_time_secs, feed_display_rows, feed_duration_text, FeedDisplayRow,
 };
 // Task 5.3d.17a: BrowserComponent paints the wide Movies/home-video
-// hero-on-left layout itself (mirroring HomeComponent's image-deferral),
+// Wide hero layout itself (mirroring HomeComponent's image-deferral),
 // so the legacy wide renderer can be deleted in 5.3d.17b. Re-export the
 // shared helpers it needs at crate::app visibility.
-pub(in crate::app) use arrangements::hero_left::{
-    hero_on_left_list_panel_border, hero_on_left_pane, hero_on_left_right_pane,
-    shared_hero_presentation, LeftPaneFocus, PANE_PAD_X, PANE_PAD_Y,
-};
 pub(in crate::app) use arrangements::library::wide_library_panes;
 pub(in crate::app) use arrangements::padded_rect;
+pub(in crate::app) use arrangements::wide_hero::{
+    wide_hero_browser_border, wide_hero_browser_pane, wide_hero_hero_pane, wide_hero_presentation,
+    LeftPaneFocus, PANE_PAD_X, PANE_PAD_Y,
+};
 pub(in crate::app) use components::hero::render_search_box;
 pub(in crate::app) use components::home_hero::{
     prepare_wide_emby_hero_card, render_home_hero_content, HeroData,

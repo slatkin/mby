@@ -323,7 +323,7 @@ impl App {
         // inline browser's pill placement (design.md decision 6: pill
         // *position* is geometry, not a per-screen declaration) -- not
         // carved out of `lib_area` here. Wide grouped Music is the one
-        // exception: its pills sit in the hero-on-left right rail instead
+        // exception: its pills sit in the Wide hero right rail instead
         // (`render_wide_music_group`), which `list.rs` still branches to
         // internally before reaching the inline presentation path.
 

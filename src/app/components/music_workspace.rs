@@ -21,7 +21,7 @@ use super::msg::{AlbumCursorKind, Msg, ShellRequest};
 use super::user_event::UserEvent;
 use crate::app::layout::LayoutMain;
 use crate::app::render::{
-    render_narrow_music_group_with_ctx, render_wide_music_group_with_ctx, shared_hero_presentation,
+    render_narrow_music_group_with_ctx, render_wide_music_group_with_ctx, wide_hero_presentation,
     MusicImagePaint, MusicWideRenderCtx,
 };
 use crate::app::ui_util::list_duration_secs;
@@ -524,7 +524,7 @@ impl InlineSearchHost for MusicWorkspaceComponent {
 impl Component for MusicWorkspaceComponent {
     fn view(&mut self, frame: &mut Frame, area: Rect) {
         self.layout = LayoutMain::default();
-        let wide = shared_hero_presentation(area).is_some();
+        let wide = wide_hero_presentation(area).is_some();
 
         // §2.5: at a breakpoint flip carry the outgoing control's anchor into
         // the incoming one so the selected album keeps its screen-row offset.
@@ -574,7 +574,7 @@ impl Component for MusicWorkspaceComponent {
             let list_area = if self.context.groups.is_empty() {
                 area
             } else {
-                let areas = crate::app::render::arrangements::hero_left::pill_bar_areas(area);
+                let areas = crate::app::render::arrangements::wide_hero::pill_bar_areas(area);
                 crate::app::render::components::music::render_music_group_pills_row_with_ctx(
                     frame,
                     areas.pills_area,

@@ -1,7 +1,7 @@
 use super::test_helpers::*;
 use super::*;
 use crate::app::components::FeedsComponent;
-use crate::app::render::arrangements::hero_left;
+use crate::app::render::arrangements::wide_hero;
 use mbv_core::api::TICKS_PER_SECOND;
 use mbv_core::config::{FeedKind, FeedSubscription};
 use mbv_core::playback_queue::FeedEntry;
@@ -80,7 +80,7 @@ fn terminal_for(component: &mut FeedsComponent, width: u16, height: u16) -> Term
 
 #[test]
 fn wide_feeds_use_a_left_detail_and_right_entry_workspace() {
-    // Canonical characterization: the parent paints the hero-on-left detail
+    // Canonical characterization: the parent paints the Wide hero detail
     // pane and frames the right rail; the canonical `WideMediaList` paints the
     // grouped rows into the inset sub-rect. Observable intent preserved from
     // the legacy painter: left-detail/right-entry split, framed rail with a
@@ -125,10 +125,10 @@ fn wide_feeds_use_a_left_detail_and_right_entry_workspace() {
             "feed hero must paint its reserved artwork slot placeholder"
         );
         let panel = Rect::new(
-            layout.left_area.x.saturating_sub(hero_left::PANE_PAD_X),
-            layout.left_area.y.saturating_sub(hero_left::PANE_PAD_Y),
-            layout.left_area.width + 2 * hero_left::PANE_PAD_X,
-            layout.left_area.height + 2 * hero_left::PANE_PAD_Y,
+            layout.left_area.x.saturating_sub(wide_hero::PANE_PAD_X),
+            layout.left_area.y.saturating_sub(wide_hero::PANE_PAD_Y),
+            layout.left_area.width + 2 * wide_hero::PANE_PAD_X,
+            layout.left_area.height + 2 * wide_hero::PANE_PAD_Y,
         );
         assert_eq!(buffer[(panel.x, panel.y)].symbol(), "▔");
         assert_eq!(
@@ -282,10 +282,10 @@ fn wide_feeds_reserve_borders_at_the_scrolled_bottom_boundary() {
     assert!(component.scroll() > 0);
 
     let panel = Rect::new(
-        layout.left_area.x.saturating_sub(hero_left::PANE_PAD_X),
-        layout.left_area.y.saturating_sub(hero_left::PANE_PAD_Y),
-        layout.left_area.width + 2 * hero_left::PANE_PAD_X,
-        layout.left_area.height + 2 * hero_left::PANE_PAD_Y,
+        layout.left_area.x.saturating_sub(wide_hero::PANE_PAD_X),
+        layout.left_area.y.saturating_sub(wide_hero::PANE_PAD_Y),
+        layout.left_area.width + 2 * wide_hero::PANE_PAD_X,
+        layout.left_area.height + 2 * wide_hero::PANE_PAD_Y,
     );
     let buffer = terminal.backend().buffer();
     // The scrolled-to selection paints on the last row of the inset list
@@ -300,7 +300,7 @@ fn wide_feeds_reserve_borders_at_the_scrolled_bottom_boundary() {
     assert_eq!(buffer[(panel.x, panel.bottom() - 1)].symbol(), "▁");
 }
 
-/// migrate-home-feeds 5.1: the shared hero-on-left primitive owns the status-row
+/// migrate-home-feeds 5.1: the shared Wide hero primitive owns the status-row
 /// reserve, so the Wide Feeds list panel and left hero panel must bottom out
 /// exactly one row above `area.bottom()` — the same one-row gap every sibling
 /// tab gets from the shared primitive (no per-tab reserve on top of it).
@@ -311,7 +311,7 @@ fn wide_feeds_reserve_a_bottom_row_above_the_status_bar() {
     let terminal = terminal_for(&mut component, 120, height);
     let layout = component.layout();
 
-    let list_panel_bottom = layout.left_area.bottom() + hero_left::PANE_PAD_Y;
+    let list_panel_bottom = layout.left_area.bottom() + wide_hero::PANE_PAD_Y;
     assert_eq!(
         list_panel_bottom,
         height - 1,
@@ -382,7 +382,7 @@ fn feeds_buffer_characterization_covers_default_focused_narrow_and_selected_stat
 fn feeds_pill_row_and_targets_are_characterized_end_to_end() {
     let assert_geometry = |terminal: &Terminal<TestBackend>, layout: &LayoutMain| {
         let panel = Rect::new(0, 0, 60, 20);
-        let areas = hero_left::pill_bar_areas(panel);
+        let areas = wide_hero::pill_bar_areas(panel);
         assert_surface_pills(
             terminal,
             layout,

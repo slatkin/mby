@@ -304,7 +304,7 @@ fn feed_group_picker_wide_borderline_height_keeps_pills_above_rows() {
     model.sync_mounted_surfaces();
 
     // At this terminal height the mounted browser's full area is just tall
-    // enough for hero-on-left, while the feed layer's two reserved rows make
+    // enough for Wide hero, while the feed layer's two reserved rows make
     // its body too short. This must take the body-area fallback, not repaint
     // the group-pill row at the top of the full area.
     let width = 120;
@@ -322,7 +322,7 @@ fn feed_group_picker_wide_borderline_height_keeps_pills_above_rows() {
         area.height, 7,
         "fixture must exercise the borderline wide height"
     );
-    assert!(crate::app::render::shared_hero_presentation(area).is_some());
+    assert!(crate::app::render::wide_hero_presentation(area).is_some());
     assert!(crate::app::render::wide_library_panes(
         ratatui::layout::Rect {
             y: area.y + 2,

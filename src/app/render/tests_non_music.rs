@@ -61,7 +61,7 @@ fn wide_home_video_uses_a_left_detail_and_right_rail() {
     assert!(layout.movies_wide_right_area.height > 0);
 }
 
-/// `remove-migrated-surface-underpaint` 3.2 (D4): at the wide hero-on-left
+/// `remove-migrated-surface-underpaint` 3.2 (D4): at the wide Wide hero
 /// breakpoint the mounted `BrowserComponent` owns the Movies / home-video
 /// picture. Post task 3.8 the legacy `render_library` `EmbyLibrary` arm only
 /// reserves the destination `left_area` and paints no row, banner, or hero —
@@ -259,7 +259,7 @@ fn tv_series_list_computes_sorted_indices_when_above_threshold() {
 /// Characterization test for the narrow (single-column) Series inline hero
 /// (task 2.1/2.2): renders hero content only (title/meta/overview/image) --
 /// no "Series:" season pill/count row, no episode table. The wide
-/// (hero-on-left) presentation is a non-goal here; see `tv_wide_tests.rs`
+/// (Wide hero) presentation is a non-goal here; see `tv_wide_tests.rs`
 /// for its unchanged coverage.
 #[test]
 fn narrow_series_inline_hero_shows_only_hero_content_no_season_or_episode_list() {
@@ -330,7 +330,7 @@ fn narrow_series_inline_hero_shows_only_hero_content_no_season_or_episode_list()
     );
 }
 
-/// migrate-home-feeds 5.1 (§5 geometry test): the shared hero-on-left
+/// migrate-home-feeds 5.1 (§5 geometry test): the shared Wide hero
 /// primitive owns the one-row status-bar reserve, so wide Music's framed list
 /// panel must paint its `▁` bottom border two rows above `wide_music_area`'s
 /// bottom, leaving exactly one blank row between the panel and the status bar.

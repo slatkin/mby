@@ -45,7 +45,7 @@ fn emby_browser_search_open_shortcut_letter_becomes_query_text() {
     );
 }
 
-/// Hero-on-left Wide paints Inline Search in the right rail (design.md D3):
+/// Wide hero Wide paints Inline Search in the right rail (design.md D3):
 /// the shared bordered input/result painter lands to the right of the Hero
 /// pane, not overlapping it, and the Hero pane itself remains painted.
 #[test]

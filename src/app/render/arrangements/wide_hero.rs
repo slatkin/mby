@@ -1,4 +1,4 @@
-//! Hero-on-left arrangement: geometry, borders, recessed content blocks,
+//! Wide hero arrangement: geometry, borders, recessed content blocks,
 //! and wrapped-text rendering for the two-pane layout shared by Music,
 //! Home, and future screens (design.md decisions 4–6).
 
@@ -11,21 +11,21 @@ use ratatui::widgets::{Block, Paragraph};
 use ratatui::Frame;
 use textwrap::wrap;
 
-/// Minimum outer content-area height for the hero-on-left arrangement's
+/// Minimum outer content-area height for the Wide hero arrangement's
 /// two-pane split.
-pub(in crate::app::render) const HERO_ON_LEFT_MIN_AREA_HEIGHT: u16 = 6;
-/// Minimum width either hero-on-left pane may shrink to (decision 5's
+pub(in crate::app::render) const WIDE_HERO_MIN_AREA_HEIGHT: u16 = 6;
+/// Minimum width either Wide hero pane may shrink to (decision 5's
 /// minimum pane width).
-const HERO_ON_LEFT_MIN_PANE_WIDTH: u16 = 40;
-/// Empty columns separating the hero-on-left arrangement's two panes.
-const HERO_ON_LEFT_PANE_GAP: u16 = 2;
-/// Height of the pill row at the top of the hero-on-left arrangement's right
+const WIDE_HERO_MIN_PANE_WIDTH: u16 = 40;
+/// Empty columns separating the Wide hero arrangement's two panes.
+const WIDE_HERO_PANE_GAP: u16 = 2;
+/// Height of the pill row at the top of the Wide hero arrangement's right
 /// (list) pane.
-const HERO_ON_LEFT_PILLS_ROW_HEIGHT: u16 = 1;
+const WIDE_HERO_PILLS_ROW_HEIGHT: u16 = 1;
 /// Blank rows below the pill row before the list starts.
-const HERO_ON_LEFT_PILLS_GAP_ROWS: u16 = 1;
+const WIDE_HERO_PILLS_GAP_ROWS: u16 = 1;
 
-/// Symmetric interior padding shared by every hero-on-left surface's panes
+/// Symmetric interior padding shared by every Wide hero surface's panes
 /// (hero content, list panel, recessed boxes). One definition; surfaces that
 /// previously carried their own `PANE_PAD_X`/`PANE_PAD_Y` (or `HOME_HERO_PAD_*`)
 /// copy now import these.
@@ -37,19 +37,28 @@ pub(in crate::app) const PANE_PAD_Y: u16 = 1;
 /// content; they do not own a breakpoint or a height threshold.
 ///
 /// This primitive owns the one-row status-bar reserve: both returned panes
-/// already exclude the terminal's bottom status row, so every hero-on-left
+/// already exclude the terminal's bottom status row, so every Wide hero
 /// screen bottoms out exactly one row above it. Callers must not re-derive
 /// that reserve (no extra `saturating_sub(1)` on the panes, no `bottom_pad`
-/// on `hero_on_left_right_pane`) — doing so double-subtracts and shifts the
+/// on `wide_hero_browser_pane`) — doing so double-subtracts and shifts the
 /// screen a second row.
-pub(in crate::app) fn shared_hero_presentation(content_area: Rect) -> Option<(Rect, Rect)> {
+///
+/// Geometry is returned by semantic role: `hero` is the ~40% hero/workspace
+/// pane, `browser` is the larger list pane. Physical placement is unchanged.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(in crate::app) struct WideHeroPanes {
+    pub browser: Rect,
+    pub hero: Rect,
+}
+
+pub(in crate::app) fn wide_hero_presentation(content_area: Rect) -> Option<WideHeroPanes> {
     (content_area.width >= crate::app::TWO_COLUMN_THRESHOLD
-        && content_area.height.saturating_sub(1) >= HERO_ON_LEFT_MIN_AREA_HEIGHT)
+        && content_area.height.saturating_sub(1) >= WIDE_HERO_MIN_AREA_HEIGHT)
         .then(|| {
-            let (mut left_pane, mut right_pane) = hero_on_left_panes(content_area);
-            left_pane.height = left_pane.height.saturating_sub(1);
-            right_pane.height = right_pane.height.saturating_sub(1);
-            (left_pane, right_pane)
+            let (mut hero, mut browser) = wide_hero_split(content_area);
+            hero.height = hero.height.saturating_sub(1);
+            browser.height = browser.height.saturating_sub(1);
+            WideHeroPanes { browser, hero }
         })
 }
 
@@ -60,31 +69,35 @@ mod tests {
 
     #[test]
     fn shared_presentation_owns_breakpoint_and_pane_geometry() {
-        let wide = shared_hero_presentation(Rect {
+        let wide = wide_hero_presentation(Rect {
             x: 3,
             y: 4,
             width: crate::app::TWO_COLUMN_THRESHOLD,
-            height: HERO_ON_LEFT_MIN_AREA_HEIGHT + 1,
+            height: WIDE_HERO_MIN_AREA_HEIGHT + 1,
         });
         assert!(wide.is_some());
-        let Some((left, right)) = wide else {
+        let Some(WideHeroPanes {
+            hero: left,
+            browser: right,
+        }) = wide
+        else {
             unreachable!();
         };
         assert_eq!(left.x, 3);
         assert_eq!(right.x, left.right() + 2);
 
-        assert!(shared_hero_presentation(Rect {
+        assert!(wide_hero_presentation(Rect {
             x: 0,
             y: 0,
             width: crate::app::TWO_COLUMN_THRESHOLD - 1,
             height: 20,
         })
         .is_none());
-        assert!(shared_hero_presentation(Rect {
+        assert!(wide_hero_presentation(Rect {
             x: 0,
             y: 0,
             width: crate::app::TWO_COLUMN_THRESHOLD,
-            height: HERO_ON_LEFT_MIN_AREA_HEIGHT,
+            height: WIDE_HERO_MIN_AREA_HEIGHT,
         })
         .is_none());
     }
@@ -100,7 +113,10 @@ mod tests {
             width: crate::app::TWO_COLUMN_THRESHOLD,
             height: 20,
         };
-        let (left, right) = shared_hero_presentation(area).expect("wide area");
+        let WideHeroPanes {
+            hero: left,
+            browser: right,
+        } = wide_hero_presentation(area).expect("wide area");
         assert_eq!(left.height, area.height - 1);
         assert_eq!(right.height, area.height - 1);
         assert_eq!(left.bottom(), area.bottom() - 1);
@@ -119,7 +135,7 @@ mod tests {
         assert_eq!(areas.spacer_area.height, 0);
         assert_eq!(areas.content_area.height, 0);
 
-        let right = hero_on_left_right_pane(
+        let right = wide_hero_browser_pane(
             Rect {
                 x: 20,
                 y: 3,
@@ -137,22 +153,18 @@ mod tests {
     }
 }
 
-/// Returns `(left_pane, right_pane)` for the hero-on-left arrangement's
-/// horizontal split: a `HERO_ON_LEFT_PANE_GAP`-column gutter between a
+/// Returns `(left_pane, right_pane)` for the Wide hero arrangement's
+/// horizontal split: a `WIDE_HERO_PANE_GAP`-column gutter between a
 /// ~40%-width left (hero) pane and the remaining right (list) pane, each
-/// floored at `HERO_ON_LEFT_MIN_PANE_WIDTH`.
-pub(in crate::app::render) fn hero_on_left_panes(content_area: Rect) -> (Rect, Rect) {
+/// floored at `WIDE_HERO_MIN_PANE_WIDTH`.
+pub(in crate::app::render) fn wide_hero_split(content_area: Rect) -> (Rect, Rect) {
     let left_w = ((content_area.width as u32 * 2 / 5) as u16)
-        .max(HERO_ON_LEFT_MIN_PANE_WIDTH)
-        .min(
-            content_area
-                .width
-                .saturating_sub(HERO_ON_LEFT_MIN_PANE_WIDTH),
-        );
+        .max(WIDE_HERO_MIN_PANE_WIDTH)
+        .min(content_area.width.saturating_sub(WIDE_HERO_MIN_PANE_WIDTH));
     let right_w = content_area
         .width
         .saturating_sub(left_w)
-        .saturating_sub(HERO_ON_LEFT_PANE_GAP);
+        .saturating_sub(WIDE_HERO_PANE_GAP);
     (
         Rect {
             x: content_area.x,
@@ -161,7 +173,7 @@ pub(in crate::app::render) fn hero_on_left_panes(content_area: Rect) -> (Rect, R
             height: content_area.height,
         },
         Rect {
-            x: content_area.x + left_w + HERO_ON_LEFT_PANE_GAP,
+            x: content_area.x + left_w + WIDE_HERO_PANE_GAP,
             y: content_area.y,
             width: right_w,
             height: content_area.height,
@@ -169,15 +181,15 @@ pub(in crate::app::render) fn hero_on_left_panes(content_area: Rect) -> (Rect, R
     )
 }
 
-/// The hero-on-left arrangement's right (list) pane geometry: a one-row pill
+/// The Wide hero arrangement's right (list) pane geometry: a one-row pill
 /// bar flush with the pane's top, then the list panel below it (decision
 /// 6's "pill row at top of list pane"). `right_panel` is the pane's full
 /// rect (its `y`/`height` anchor the pill row and the panel's bottom);
 /// `right_area` is the vertically-inset pane used for the pill row's
 /// x/width. The pane's own status-row reserve is owned by
-/// [`shared_hero_presentation`]; callers must not re-derive it.
+/// [`wide_hero_presentation`]; callers must not re-derive it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::app) struct HeroOnLeftRightPane {
+pub(in crate::app) struct WideHeroBrowserPane {
     pub pills_area: Rect,
     pub spacer_area: Rect,
     pub list_panel: Rect,
@@ -193,15 +205,15 @@ pub(in crate::app) struct PillBarAreas {
 /// Places the shared one-row pill bar, its one-row parent-background spacer,
 /// and the content below them.
 pub(in crate::app) fn pill_bar_areas(area: Rect) -> PillBarAreas {
-    let reserved = HERO_ON_LEFT_PILLS_ROW_HEIGHT + HERO_ON_LEFT_PILLS_GAP_ROWS;
+    let reserved = WIDE_HERO_PILLS_ROW_HEIGHT + WIDE_HERO_PILLS_GAP_ROWS;
     PillBarAreas {
         pills_area: Rect {
-            height: HERO_ON_LEFT_PILLS_ROW_HEIGHT.min(area.height),
+            height: WIDE_HERO_PILLS_ROW_HEIGHT.min(area.height),
             ..area
         },
         spacer_area: Rect {
-            y: area.y.saturating_add(HERO_ON_LEFT_PILLS_ROW_HEIGHT),
-            height: HERO_ON_LEFT_PILLS_GAP_ROWS.min(area.height.saturating_sub(1)),
+            y: area.y.saturating_add(WIDE_HERO_PILLS_ROW_HEIGHT),
+            height: WIDE_HERO_PILLS_GAP_ROWS.min(area.height.saturating_sub(1)),
             ..area
         },
         content_area: Rect {
@@ -212,24 +224,24 @@ pub(in crate::app) fn pill_bar_areas(area: Rect) -> PillBarAreas {
     }
 }
 
-pub(in crate::app) fn hero_on_left_right_pane(
+pub(in crate::app) fn wide_hero_browser_pane(
     right_panel: Rect,
     right_area: Rect,
-) -> HeroOnLeftRightPane {
+) -> WideHeroBrowserPane {
     let areas = pill_bar_areas(Rect {
         x: right_area.x,
         y: right_panel.y,
         width: right_area.width,
         height: right_panel.height,
     });
-    HeroOnLeftRightPane {
+    WideHeroBrowserPane {
         pills_area: areas.pills_area,
         spacer_area: areas.spacer_area,
         list_panel: areas.content_area,
     }
 }
 
-/// The hero-on-left left pane's focus resolution (design.md D-B). A closed
+/// The Wide hero left pane's focus resolution (design.md D-B). A closed
 /// enum rather than a `bool`: the defect class this primitive exists to
 /// prevent is exactly the read-only-versus-workspace confusion (e.g. passing
 /// a bare `focused` when the correct value is `focused &&
@@ -246,7 +258,7 @@ pub(in crate::app) enum LeftPaneFocus {
     Workspace(bool),
 }
 
-/// Paints the hero-on-left left pane: fills the [`shared_hero_presentation`]
+/// Paints the Wide hero left pane: fills the [`wide_hero_presentation`]
 /// left panel with the surface [`LeftPaneFocus`] resolves to, and returns the
 /// shared content inset (`PANE_PAD_X`, `PANE_PAD_Y`). One owner for fill,
 /// extent, inset, and focus resolution (design.md D-A) -- callers must not
@@ -255,14 +267,16 @@ pub(in crate::app) enum LeftPaneFocus {
 ///
 /// Takes `content_area` rather than a pane rect so a caller has nothing to
 /// hand in but the rect the arrangement already consumes -- it cannot supply
-/// a mutated `left_panel`. `shared_hero_presentation` is pure and cheap, so
+/// a mutated `left_panel`. `wide_hero_presentation` is pure and cheap, so
 /// recomputing it here costs nothing.
-pub(in crate::app) fn hero_on_left_pane(
+pub(in crate::app) fn wide_hero_hero_pane(
     f: &mut Frame,
     content_area: Rect,
     focus: LeftPaneFocus,
 ) -> Option<Rect> {
-    let (left_panel, _right_panel) = shared_hero_presentation(content_area)?;
+    let WideHeroPanes {
+        hero: left_panel, ..
+    } = wide_hero_presentation(content_area)?;
     let background = match focus {
         LeftPaneFocus::ReadOnly => palette::SURFACE_RESTING,
         LeftPaneFocus::Workspace(held) => palette::resolve_surface_focus(held),
@@ -276,7 +290,7 @@ pub(in crate::app) fn hero_on_left_pane(
 
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
-mod hero_on_left_pane_tests {
+mod wide_hero_hero_pane_tests {
     use super::*;
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
@@ -286,7 +300,7 @@ mod hero_on_left_pane_tests {
             x: 3,
             y: 2,
             width: crate::app::TWO_COLUMN_THRESHOLD,
-            height: HERO_ON_LEFT_MIN_AREA_HEIGHT + 5,
+            height: WIDE_HERO_MIN_AREA_HEIGHT + 5,
         }
     }
 
@@ -294,11 +308,13 @@ mod hero_on_left_pane_tests {
     fn read_only_never_resolves_to_the_focused_surface() {
         let area = wide_area();
         let mut terminal = Terminal::new(TestBackend::new(area.right(), area.bottom())).unwrap();
-        let (left_panel, _) = shared_hero_presentation(area).expect("wide fits");
+        let WideHeroPanes {
+            hero: left_panel, ..
+        } = wide_hero_presentation(area).expect("wide fits");
         terminal
             .draw(|f| {
                 let returned =
-                    hero_on_left_pane(f, area, LeftPaneFocus::ReadOnly).expect("wide fits");
+                    wide_hero_hero_pane(f, area, LeftPaneFocus::ReadOnly).expect("wide fits");
                 assert_eq!(returned, padded_rect(left_panel, PANE_PAD_X, PANE_PAD_Y));
             })
             .unwrap();
@@ -311,12 +327,14 @@ mod hero_on_left_pane_tests {
     fn workspace_resolves_focus_and_returns_the_shared_inset() {
         let area = wide_area();
         let mut terminal = Terminal::new(TestBackend::new(area.right(), area.bottom())).unwrap();
-        let (left_panel, _) = shared_hero_presentation(area).expect("wide fits");
+        let WideHeroPanes {
+            hero: left_panel, ..
+        } = wide_hero_presentation(area).expect("wide fits");
         let expected = padded_rect(left_panel, PANE_PAD_X, PANE_PAD_Y);
         terminal
             .draw(|f| {
-                let returned =
-                    hero_on_left_pane(f, area, LeftPaneFocus::Workspace(true)).expect("wide fits");
+                let returned = wide_hero_hero_pane(f, area, LeftPaneFocus::Workspace(true))
+                    .expect("wide fits");
                 assert_eq!(returned.x, left_panel.x + PANE_PAD_X);
                 assert_eq!(returned.y, left_panel.y + PANE_PAD_Y);
                 assert_eq!(returned, expected);
@@ -328,7 +346,7 @@ mod hero_on_left_pane_tests {
         let mut terminal = Terminal::new(TestBackend::new(area.right(), area.bottom())).unwrap();
         terminal
             .draw(|f| {
-                hero_on_left_pane(f, area, LeftPaneFocus::Workspace(false)).expect("wide fits");
+                wide_hero_hero_pane(f, area, LeftPaneFocus::Workspace(false)).expect("wide fits");
             })
             .unwrap();
         let cell = &terminal.backend().buffer()[(left_panel.x, left_panel.y)];
@@ -346,7 +364,7 @@ mod hero_on_left_pane_tests {
         let mut terminal = Terminal::new(TestBackend::new(area.right(), area.bottom())).unwrap();
         terminal
             .draw(|f| {
-                assert_eq!(hero_on_left_pane(f, area, LeftPaneFocus::ReadOnly), None);
+                assert_eq!(wide_hero_hero_pane(f, area, LeftPaneFocus::ReadOnly), None);
             })
             .unwrap();
         let buffer = terminal.backend().buffer();
@@ -363,13 +381,9 @@ mod hero_on_left_pane_tests {
 /// row inside `list_panel`'s own top/bottom edge. The rail uses the shared
 /// painter's focused-rail framing arm; its fixed window mirrors `hero_block_shell`'s
 /// (`offset = 0`, fully visible, padding rows `[1, height - 2]`); this is
-/// hero-on-left's thin shell entry point, the same role `hero_block_shell`
+/// Wide hero's thin shell entry point, the same role `hero_block_shell`
 /// plays for inline presentation.
-pub(in crate::app) fn hero_on_left_list_panel_border(
-    f: &mut Frame,
-    list_panel: Rect,
-    focused: bool,
-) {
+pub(in crate::app) fn wide_hero_browser_border(f: &mut Frame, list_panel: Rect, focused: bool) {
     if list_panel.height == 0 {
         return;
     }
@@ -391,16 +405,16 @@ pub(in crate::app) fn hero_on_left_list_panel_border(
     );
 }
 
-/// Paints the hero-on-left arrangement's main content box: a
-/// [`palette::SURFACE_BACKDROP`] inset within the hero-on-left left pane,
-/// present on every hero-on-left surface with a kind-dependent payload (the
+/// Paints the Wide hero arrangement's main content box: a
+/// [`palette::SURFACE_BACKDROP`] inset within the Wide hero left pane,
+/// present on every Wide hero surface with a kind-dependent payload (the
 /// episode listing on TV, the track listing on Music, item description and
 /// metadata elsewhere) and one shared padding value (design.md D9, matching
 /// the pane inset from D6). Returns both rects so callers can use `panel` for
 /// full-bleed row backgrounds and `content` for text layout.
 ///
 /// Shared by Music's track panel and Home's overview block.
-pub(in crate::app::render) fn hero_on_left_main_content_box(
+pub(in crate::app::render) fn wide_hero_hero_content_box(
     f: &mut Frame,
     area: Rect,
 ) -> (Rect, Rect) {
@@ -422,25 +436,25 @@ pub(in crate::app::render) fn hero_on_left_main_content_box(
     (panel, content)
 }
 
-/// Named Rect-only extension points within a hero-on-left content rect
+/// Named Rect-only extension points within a Wide hero content rect
 /// (design.md D-D): an optional artwork region and the overview text area
 /// filling the remainder. Placement only -- no painting, no Service/image
 /// effects, no list ownership.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(in crate::app) struct HeroLeftSlots {
+pub(in crate::app) struct WideHeroSlots {
     pub artwork: Option<Rect>,
     pub overview: Rect,
 }
 
-/// Slices `content` top-to-bottom into `HeroLeftSlots`: an `artwork_height`
+/// Slices `content` top-to-bottom into `WideHeroSlots`: an `artwork_height`
 /// row artwork slot (omitted when `0`), and the overview slot filling the
 /// remainder. Callers place an embedded media list afterward via
 /// [`place_media_list_below`].
-pub(in crate::app::render) fn hero_left_slots(
+pub(in crate::app::render) fn wide_hero_slots(
     content: Rect,
     artwork_height: u16,
     images_enabled: bool,
-) -> HeroLeftSlots {
+) -> WideHeroSlots {
     let artwork_height = artwork_height.min(content.height);
     let artwork = hero_artwork_slot(
         Rect {
@@ -450,7 +464,7 @@ pub(in crate::app::render) fn hero_left_slots(
         images_enabled,
     );
     // One blank row between the artwork and the title below it, matching the
-    // wide hero-on-left card (`prepare_wide_emby_hero_card`, which starts its
+    // wide Wide hero card (`prepare_wide_emby_hero_card`, which starts its
     // metadata at `img_area.bottom() + 1`) and every other tab's hero.
     let reserved_artwork_height = artwork.map_or(0, |area| area.height + 1);
     let reserved_artwork_height = reserved_artwork_height.min(content.height);
@@ -459,7 +473,7 @@ pub(in crate::app::render) fn hero_left_slots(
         height: content.height.saturating_sub(reserved_artwork_height),
         ..content
     };
-    HeroLeftSlots { artwork, overview }
+    WideHeroSlots { artwork, overview }
 }
 
 /// Applies the global image policy to an artwork region. Images-off removes
@@ -472,11 +486,11 @@ pub(in crate::app::render) fn hero_artwork_slot(area: Rect, images_enabled: bool
 /// caller's already-painted overview content's real bottom row -- not a
 /// pre-reserved slot height), sized to `height` rows and clamped to fit
 /// within `content`'s bottom edge. Returns `None` when there is no room
-/// (same "omitted when no room" convention as [`hero_left_slots`]).
+/// (same "omitted when no room" convention as [`wide_hero_slots`]).
 ///
 /// Rect-only: no painting, no text measurement -- callers supply the
 /// already-measured overview bottom and desired height. Reusable by any
-/// hero-on-left surface embedding a media list below its overview (TV's
+/// Wide hero surface embedding a media list below its overview (TV's
 /// episode list; a future Music tracks / Audiobookshelf list).
 pub(in crate::app::render) fn place_media_list_below(
     content: Rect,
@@ -499,7 +513,7 @@ pub(in crate::app::render) fn place_media_list_below(
 
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
-mod hero_left_slots_tests {
+mod wide_hero_slots_tests {
     use super::*;
 
     fn content() -> Rect {
@@ -513,7 +527,7 @@ mod hero_left_slots_tests {
 
     #[test]
     fn splits_artwork_and_overview_slots() {
-        let slots = hero_left_slots(content(), 5, true);
+        let slots = wide_hero_slots(content(), 5, true);
         let artwork = slots.artwork.expect("artwork slot present");
         assert_eq!(artwork.y, content().y);
         assert_eq!(artwork.height, 5);
@@ -523,7 +537,7 @@ mod hero_left_slots_tests {
 
     #[test]
     fn omits_absent_artwork_slot() {
-        let slots = hero_left_slots(content(), 0, true);
+        let slots = wide_hero_slots(content(), 0, true);
         assert!(slots.artwork.is_none());
         assert_eq!(slots.overview, content());
     }
@@ -531,7 +545,7 @@ mod hero_left_slots_tests {
     #[test]
     fn images_off_collapses_artwork_and_preserves_full_content_width() {
         let area = content();
-        let slots = hero_left_slots(area, 5, false);
+        let slots = wide_hero_slots(area, 5, false);
         assert!(slots.artwork.is_none());
         assert_eq!(slots.overview, area);
         assert_eq!(hero_artwork_slot(area, false), None);
@@ -567,8 +581,8 @@ mod hero_left_slots_tests {
     }
 }
 
-/// One line of the `Hero` component's hero-on-left text block. Unlike
-/// inline presentation's single-row, truncated [`super::hero::HeroLine`], hero-on-left
+/// One line of the `Hero` component's Wide hero text block. Unlike
+/// inline presentation's single-row, truncated [`super::hero::HeroLine`], Wide hero
 /// text wraps across as many rows as it needs (design.md decision 2's
 /// "Consequence": text wrapping moves into `Hero`, screens hand over
 /// unwrapped strings). Style is screen-chosen (e.g. focus-derived bold),
@@ -582,7 +596,7 @@ pub(in crate::app::render) struct WrappedHeroLine<'a> {
 /// Paints `lines` wrapped to `area`'s width, top to bottom, stopping at
 /// `area`'s bottom edge; empty line text is skipped. Returns the first
 /// unpainted row.
-pub(in crate::app::render) fn paint_hero_on_left_text(
+pub(in crate::app::render) fn paint_wide_hero_text(
     f: &mut Frame,
     area: Rect,
     lines: &[WrappedHeroLine],

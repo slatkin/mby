@@ -212,7 +212,7 @@ fn wide_tv_persists_series_workspace_and_separate_targets() {
     assert!(output.contains("1:00:00"));
 }
 
-/// `remove-migrated-surface-underpaint` 3.3 (D4): at the wide hero-on-left
+/// `remove-migrated-surface-underpaint` 3.3 (D4): at the wide Wide hero
 /// breakpoint the mounted `TvWorkspaceComponent` owns the picture.
 /// `render_library` publishes the `tv_wide_*` geometry hand-off and
 /// `render_list` then returns (`src/app/render/components/list.rs:113`)
@@ -322,7 +322,7 @@ fn wide_tv_episode_list_uses_soft_accent_when_focused() {
     );
 }
 
-/// migrate-home-feeds 5.1 (§5 geometry test): the shared hero-on-left
+/// migrate-home-feeds 5.1 (§5 geometry test): the shared Wide hero
 /// primitive owns the one-row status-bar reserve, so wide TV's framed series
 /// rail paints its `▁` bottom border two rows above `tv_wide_area`'s bottom,
 /// leaving exactly one blank row before the status bar. Asserted against the

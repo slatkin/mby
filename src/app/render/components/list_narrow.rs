@@ -8,7 +8,7 @@ use crate::app::components::media_list::InlineMediaBrowser;
 use crate::app::images::series_image_cache_key;
 use crate::app::layout::LayoutMain;
 use crate::app::library_column_width::library_column_count;
-use crate::app::render::arrangements::{hero_left, library};
+use crate::app::render::arrangements::{library, wide_hero};
 use crate::app::render::components::hero::{
     selected_detail_shell, HERO_BLOCK_EXTRA_ROWS, HERO_PLACEHOLDER_ROWS, HERO_TITLE_ROWS,
 };
@@ -104,7 +104,7 @@ pub(in crate::app) fn render_narrow_browse_with_ctx(
     // rows, inline-hero replacement, hit maps — is the shared path.
     let feed_group_pills = extras.feed_items.is_some();
     let (pills_area, list_area) = if extras.show_letter_pills || feed_group_pills {
-        let areas = hero_left::pill_bar_areas(content_area);
+        let areas = wide_hero::pill_bar_areas(content_area);
         (areas.pills_area, areas.content_area)
     } else {
         (Rect::default(), content_area)
@@ -418,7 +418,7 @@ impl App {
         // selections without a resolved leaf hero, uses the inline
         // replacement flow. Non-hero catalogs keep their width-derived grid.
         let hero_placeholder = inline_hero.is_none()
-            && crate::app::render::arrangements::hero_left::shared_hero_presentation(
+            && crate::app::render::arrangements::wide_hero::wide_hero_presentation(
                 self.layout.main.left_area,
             )
             .is_none()

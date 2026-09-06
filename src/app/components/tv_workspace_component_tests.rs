@@ -390,7 +390,7 @@ fn slash_emits_open_inline_search() {
     );
 }
 
-/// Hero-on-left Wide paints Inline Search in the right rail (design.md D3):
+/// Wide hero Wide paints Inline Search in the right rail (design.md D3):
 /// the shared bordered input/result painter lands in the series rail, not
 /// the episode/Hero pane to its left, which remains visible.
 #[test]

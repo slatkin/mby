@@ -1,7 +1,7 @@
 use super::components::{
     BrowserKey, BrowserKind, ComponentId, InlineSearchHost, MusicWorkspaceComponent,
 };
-use super::render::{shared_hero_presentation, MusicWideRenderCtx};
+use super::render::{wide_hero_presentation, MusicWideRenderCtx};
 use super::shell::Model;
 use super::TabSelection;
 use mbv_core::api::EmbyItem;
@@ -181,7 +181,7 @@ impl Model {
         // area, so fall back to the narrow main content area (`left_area`) so
         // the component's `view` is still reached.
         let mut area = self.app.layout.main.wide_music_area;
-        let wide = shared_hero_presentation(area).is_some();
+        let wide = wide_hero_presentation(area).is_some();
         if !wide {
             area = self.app.layout.main.left_area;
         }

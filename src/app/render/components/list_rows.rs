@@ -482,7 +482,7 @@ pub(in crate::app::render) fn draw_column_selection_markers(
 }
 
 /// Draws selection markers with the selected row's surface. Most catalog
-/// lists use the resting selected-row surface; hero-on-left Feeds rows use
+/// lists use the resting selected-row surface; Wide hero Feeds rows use
 /// their focus-resolved surface instead.
 pub(in crate::app::render) fn draw_column_selection_markers_with_background(
     f: &mut Frame,

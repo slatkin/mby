@@ -1,7 +1,7 @@
 use crate::app::components::media_list::{InlineMediaBrowser, RowGeometry, WideMediaList};
 use crate::app::layout::LayoutMain;
 use crate::app::palette;
-use crate::app::render::arrangements::{hero_left, padded_rect};
+use crate::app::render::arrangements::{padded_rect, wide_hero};
 use crate::app::render::components::hero::{
     paint_hero_content, selected_detail_shell, HeroContent, HERO_BLOCK_EXTRA_ROWS,
 };
@@ -37,8 +37,8 @@ pub(in crate::app) struct FeedsRenderModel<'a> {
 }
 
 /// Paints the Feeds destination's parent-owned pill strip + watched-filter
-/// chrome + hero-on-left detail pane, then mounts the active canonical control
-/// (`WideMediaList` for hero-on-left Wide, `InlineMediaBrowser` for inline
+/// chrome + Wide hero detail pane, then mounts the active canonical control
+/// (`WideMediaList` for Wide hero Wide, `InlineMediaBrowser` for inline
 /// Narrow) into the list sub-rect below the pill strip and rebuilds the
 /// pre-#638 row-geometry maps from its exported `RowGeometry`. Returns the
 /// resolved scroll offset the painter used this frame (observability only; the
@@ -63,7 +63,7 @@ pub(in crate::app) fn render_feeds_content(
     // filter remains Feeds chrome immediately below that spacer, with the
     // existing trailing gap before the list.
     let render_selector_content = |f: &mut Frame, pane: Rect| {
-        let areas = hero_left::pill_bar_areas(pane);
+        let areas = wide_hero::pill_bar_areas(pane);
         let mut selector_tabs = Vec::new();
         if has_subs && areas.pills_area.height > 0 {
             const MAX_LABEL: usize = 12;
@@ -148,8 +148,8 @@ pub(in crate::app) fn render_feeds_content(
 
     // The shared arrangement owns the pill row and spacer (and the status-row
     // reserve on both returned panes).
-    let wide_panes = hero_left::shared_hero_presentation(area);
-    let selector_pane = wide_panes.map(|(_, right)| right).unwrap_or(area);
+    let wide_panes = wide_hero::wide_hero_presentation(area);
+    let selector_pane = wide_panes.map(|panes| panes.browser).unwrap_or(area);
     let (selector_tabs, list_panel) = render_selector_content(f, selector_pane);
     layout.selector_tabs = selector_tabs;
     layout.left_area = list_panel;
@@ -188,18 +188,18 @@ pub(in crate::app) fn render_feeds_content(
 
     let wide = wide_panes.is_some();
 
-    // Wide: paint the parent-owned hero-on-left detail pane, then frame the
+    // Wide: paint the parent-owned Wide hero detail pane, then frame the
     // right rail and inset the canonical control inside it so the border can
     // never replace a heading or the last visible entry at a scroll boundary.
-    let (list_area, outer_panel) = if let Some((hero_panel, _)) = wide_panes {
+    let (list_area, outer_panel) = if let Some(hero_panel) = wide_panes.map(|panes| panes.hero) {
         layout.hero_area = hero_panel;
         // Wide left hero pane: unconditional fill via the shared primitive
         // (D1, persistent pane -- painted even with no selected entry). Feeds
         // is read-only and never focus-green (D3/D8).
         let hero_content_area =
-            hero_left::hero_on_left_pane(f, area, hero_left::LeftPaneFocus::ReadOnly)
-                .expect("wide branch already confirmed shared_hero_presentation fits");
-        let (_, hero_content_area) = hero_left::hero_on_left_main_content_box(f, hero_content_area);
+            wide_hero::wide_hero_hero_pane(f, area, wide_hero::LeftPaneFocus::ReadOnly)
+                .expect("wide branch already confirmed wide_hero_presentation fits");
+        let (_, hero_content_area) = wide_hero::wide_hero_hero_content_box(f, hero_content_area);
         if let Some(entry) = model.selected_entry {
             paint_feed_hero(f, hero_content_area, entry, focused, model.images_enabled);
         }
@@ -210,7 +210,7 @@ pub(in crate::app) fn render_feeds_content(
         // `list_area` is the inset content rect (row/hit geometry); the
         // painter is handed a full-width, vertically-inset paint rect below.
         (
-            padded_rect(list_panel, hero_left::PANE_PAD_X, hero_left::PANE_PAD_Y),
+            padded_rect(list_panel, wide_hero::PANE_PAD_X, wide_hero::PANE_PAD_Y),
             Some(list_panel),
         )
     } else {
@@ -234,7 +234,7 @@ pub(in crate::app) fn render_feeds_content(
         // panel background, so it must run before `render_wide_media_list`
         // paints the selected-row bar (matches TV / Music ordering).
         if let Some(panel) = outer_panel {
-            hero_left::hero_on_left_list_panel_border(f, panel, focused);
+            wide_hero::wide_hero_browser_border(f, panel, focused);
         }
         let paint = render_wide_media_list(
             f,
