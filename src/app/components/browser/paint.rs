@@ -48,10 +48,10 @@ impl BrowserComponent {
             self.layout.left_row_map = paint.left_row_map;
             return paint.row_geometry.offset();
         };
-        let right_panel = panes.right_panel;
+        let browser_panel = panes.browser_panel;
 
-        let right_area = panes.right_area;
-        self.layout.movies_wide_right_area = right_area;
+        let browser_area = panes.browser_area;
+        self.layout.movies_wide_right_area = browser_area;
 
         // Left pane: read-only shared hero card (not an interactive hero —
         // `layout.hero_area` stays unset so the left pane is outside mouse
@@ -80,7 +80,7 @@ impl BrowserComponent {
             });
 
         // Right rail: pill row + one-column list.
-        let right_pane = wide_hero_browser_pane(right_panel, right_area);
+        let right_pane = wide_hero_browser_pane(browser_panel, browser_area);
         let pills_area = right_pane.pills_area;
         let list_panel = right_pane.list_panel;
 

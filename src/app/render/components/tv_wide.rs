@@ -105,10 +105,10 @@ impl TvWideRenderCtx {
         else {
             return;
         };
-        layout.tv_wide_left_area = panes.left_area;
-        layout.tv_wide_right_area = panes.right_area;
+        layout.tv_wide_left_area = panes.hero_area;
+        layout.tv_wide_right_area = panes.browser_area;
         layout.left_area = Rect::default();
-        let right_pane = wide_hero::wide_hero_browser_pane(panes.right_panel, panes.right_area);
+        let right_pane = wide_hero::wide_hero_browser_pane(panes.browser_panel, panes.browser_area);
         layout.tv_wide_list_area = padded_rect(right_pane.list_panel, PANE_PAD_X, PANE_PAD_Y);
     }
 }
@@ -221,8 +221,8 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
     let Some(panes) = library_arrangement::wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y) else {
         return (0, None);
     };
-    let right_panel = panes.right_panel;
-    let right_area = panes.right_area;
+    let browser_panel = panes.browser_panel;
+    let browser_area = panes.browser_area;
     let episode_focused = ctx.focused && ctx.episode_cursor.is_some();
     let right_focused = ctx.focused && !episode_focused;
     let Some(left_area) = wide_hero::wide_hero_hero_pane(
@@ -233,7 +233,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
         return (0, None);
     };
     layout.tv_wide_left_area = left_area;
-    layout.tv_wide_right_area = right_area;
+    layout.tv_wide_right_area = browser_area;
     layout.left_area = Rect::default();
 
     let (selection_rendered, image_paint) = render_tv_series_selection(
@@ -252,7 +252,7 @@ pub(in crate::app) fn render_wide_tv_with_ctx(
         render_placeholder(f, left_area, " Loading\u{2026}");
     }
 
-    let right_pane = wide_hero::wide_hero_browser_pane(right_panel, right_area);
+    let right_pane = wide_hero::wide_hero_browser_pane(browser_panel, browser_area);
     if ctx.list.is_search_active() {
         crate::app::render::components::hero::render_search_box(
             f,

@@ -162,7 +162,7 @@ pub(in crate::app) fn render_audiobookshelf_book_content(
     let plan = book_hero_plan(state, area.width, images_enabled);
     if wide_hero::wide_hero_presentation(area).is_some() {
         let panes = library_arrangement::wide_library_panes(area, 0, PANE_PAD_Y)?;
-        geometry.left_area = panes.left_area;
+        geometry.left_area = panes.hero_area;
         geometry.wide = true;
         let hero_content_area = wide_hero::wide_hero_hero_pane(
             frame,
@@ -201,7 +201,7 @@ pub(in crate::app) fn render_audiobookshelf_book_content(
             geometry,
         );
         let rail_focused = focused && interaction.chapter_selection.is_none();
-        let right_pane = wide_hero_browser_pane(panes.right_panel, panes.right_area);
+        let right_pane = wide_hero_browser_pane(panes.browser_panel, panes.browser_area);
         geometry.selector_tabs = render_book_pills(
             frame,
             right_pane.pills_area,

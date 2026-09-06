@@ -372,9 +372,9 @@ fn wide_music_frame_publishes_identical_geometry_from_publish_and_paint() {
         .unwrap();
 
     let (published_panes, published_left) = published;
-    assert_eq!(published_panes.left_area, paint_layout.left_area);
+    assert_eq!(published_panes.hero_area, paint_layout.left_area);
     assert_eq!(
-        published_panes.right_area,
+        published_panes.browser_area,
         paint_layout.wide_music_right_area
     );
     assert_eq!(published_left.hero_area, paint_layout.hero_area);

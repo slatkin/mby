@@ -59,14 +59,14 @@ fn tv_wide_left_pane_unconditional_fill_shared_inset() {
     let buffer = terminal.backend().buffer();
 
     let panes = wide_library_panes(area, PANE_PAD_X, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
+    let hero_panel = panes.hero_panel;
 
     assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
+        buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::resolve_surface_focus(false)
     );
     assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
+        buffer[(hero_panel.x, hero_panel.bottom() - 1)].bg,
         palette::resolve_surface_focus(false)
     );
 }
@@ -85,14 +85,14 @@ fn music_wide_left_pane_unconditional_fill_no_horizontal_pad() {
     let buffer = terminal.backend().buffer();
 
     let panes = wide_library_panes(area, 0, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
+    let hero_panel = panes.hero_panel;
 
     assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
+        buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::resolve_surface_focus(false)
     );
     assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
+        buffer[(hero_panel.x, hero_panel.bottom() - 1)].bg,
         palette::resolve_surface_focus(false)
     );
 }
@@ -307,16 +307,16 @@ fn abs_books_wide_left_pane_fills_via_shared_primitive() {
     let geometry = component.geometry();
     assert!(geometry.wide);
     let panes = wide_library_panes(area, 0, PANE_PAD_Y).expect("wide fits");
-    let left_panel = panes.left_panel;
+    let hero_panel = panes.hero_panel;
     let buffer = terminal.backend().buffer();
     // No chapter is selected in this fixture, so the workspace is not held:
     // the pane stays resting, not focus-green.
     assert_eq!(
-        buffer[(left_panel.x, left_panel.y)].bg,
+        buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::SURFACE_RESTING
     );
     assert_eq!(
-        buffer[(left_panel.x, left_panel.bottom() - 1)].bg,
+        buffer[(hero_panel.x, hero_panel.bottom() - 1)].bg,
         palette::SURFACE_RESTING
     );
 
@@ -327,7 +327,7 @@ fn abs_books_wide_left_pane_fills_via_shared_primitive() {
     let focused_terminal = direct_terminal(|f| component.view(f, area));
     let focused_buffer = focused_terminal.backend().buffer();
     assert_eq!(
-        focused_buffer[(left_panel.x, left_panel.y)].bg,
+        focused_buffer[(hero_panel.x, hero_panel.y)].bg,
         palette::SURFACE_FOCUSED
     );
 }
