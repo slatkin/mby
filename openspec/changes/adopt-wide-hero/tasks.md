@@ -11,10 +11,10 @@
 
 ## 3. Adopt mirrored geometry everywhere
 
-- [ ] 3.1 Update Home, generic Emby Movies/homevideos/podcasts, and Feeds Wide rendering so the canonical browser and browser-level pills paint left while the read-only hero paints right; verify existing rendered checks pass and read-only hero pointer behavior remains inert.
-- [ ] 3.2 Update TV and grouped Music so their canonical browser rails paint left and their Series/episode or album/track workspaces paint right; verify existing focus, selection, Inline Search, image, and pointer checks pass without changing keyboard dispatch.
-- [ ] 3.3 Update Audiobookshelf Podcast and Book so show/book browsers and pills paint left and episode/chapter workspaces paint right; verify existing breakpoint, anchor, focus, image, and pointer checks pass without changing input behavior.
-- [ ] 3.4 Audit each affected Interactive Component's published paint and hit geometry so pointer targets move with their painted pane and no shell/global hit map is introduced; verify the existing mouse integration tests for affected destinations pass.
+- [x] 3.1 Update Home, generic Emby Movies/homevideos/podcasts, and Feeds Wide rendering so the canonical browser and browser-level pills paint left while the read-only hero paints right; verify existing rendered checks pass and read-only hero pointer behavior remains inert.
+- [x] 3.2 Update TV and grouped Music so their canonical browser rails paint left and their Series/episode or album/track workspaces paint right; verify existing focus, selection, Inline Search, image, and pointer checks pass without changing keyboard dispatch.
+- [x] 3.3 Update Audiobookshelf Podcast and Book so show/book browsers and pills paint left and episode/chapter workspaces paint right; verify existing breakpoint, anchor, focus, image, and pointer checks pass without changing input behavior.
+- [x] 3.4 Audit each affected Interactive Component's published paint and hit geometry so pointer targets move with their painted pane and no shell/global hit map is introduced; verify the existing mouse integration tests for affected destinations pass.
 
 ## 4. Evaluate existing tests
 
