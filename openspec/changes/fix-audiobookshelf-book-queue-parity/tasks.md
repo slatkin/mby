@@ -6,9 +6,9 @@
 
 ## 2. Fix admission and playback projection
 
-- [ ] 2.1 Use combined Audiobookshelf classification for submit and append admission and cold-start active-file projection in `player_runtime_controller.rs`; verify a book-only submission without owner context returns the normal refusal before source preparation.
-- [ ] 2.2 Use combined Audiobookshelf classification in the active Playback run's append and submit routing so books never reach the ordinary mpv-playlist URL path; verify the existing daemon book fixture reaches active-file projection on cold start and active-player reuse.
-- [ ] 2.3 Use combined Audiobookshelf classification for natural-completion close position, and add one direct lifecycle test proving a naturally completed book closes at runtime while a non-natural stop retains the last valid position.
+- [x] 2.1 Use combined Audiobookshelf classification for submit and append admission and cold-start active-file projection in `player_runtime_controller.rs`; verify a book-only submission without owner context returns the normal refusal before source preparation.
+- [x] 2.2 Use combined Audiobookshelf classification in the active Playback run's append and submit routing so books never reach the ordinary mpv-playlist URL path; verify the existing daemon book fixture reaches active-file projection on cold start and active-player reuse.
+- [x] 2.3 Use combined Audiobookshelf classification for natural-completion close position, and add one direct lifecycle test proving a naturally completed book closes at runtime while a non-natural stop retains the last valid position.
 
 ## 3. Fix Audiobookshelf Service teardown
 
