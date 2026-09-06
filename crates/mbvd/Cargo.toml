@@ -13,6 +13,7 @@ path = "src/main.rs"
 mbv-core = { path = "../mbv-core" }
 libc.workspace = true
 log.workspace = true
+mimalloc.workspace = true
 nix.workspace = true
 serde_json.workspace = true
 

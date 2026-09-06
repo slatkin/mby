@@ -1,7 +1,11 @@
 use mbv_core::{applog, config, daemon};
+use mimalloc::MiMalloc;
 use std::io::{self, BufRead, BufReader, IsTerminal, Write};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn print_usage() {
     eprintln!("Usage: mbvd [--audio-only] [-q|--quit] [--export-shared-data] [--connect emby] [--connect abs] [--disconnect abs] [--version]");
