@@ -40,13 +40,6 @@ impl Model {
         if !self.application.mounted(&id) {
             return;
         }
-        let panel =
-            (self.app.layout.main.panel_area.width > 0).then_some(self.app.layout.main.panel_area);
-        if let Some(comp) = self.application.get_component_mut(&id) {
-            if let Some(playlists) = comp.as_any_mut().downcast_mut::<PlaylistsComponent>() {
-                playlists.set_panel_area(panel);
-            }
-        }
         self.application.view(&id, frame, frame.area());
     }
 
