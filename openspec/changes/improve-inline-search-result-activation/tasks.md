@@ -1,6 +1,6 @@
 ## 1. Result-row actions
 
-- [ ] 1.1 Preserve destination-owned context-menu actions and Ctrl+P, Ctrl+S, and Ctrl+A for a result row after a mouse gesture starts in Inline Search; extend the smallest existing interaction characterization and verify it passes.
+- [x] 1.1 Preserve destination-owned context-menu actions and Ctrl+P, Ctrl+S, and Ctrl+A for a result row after a mouse gesture starts in Inline Search; extend the smallest existing interaction characterization and verify it passes.
 
 ## 2. Album result activation
 
