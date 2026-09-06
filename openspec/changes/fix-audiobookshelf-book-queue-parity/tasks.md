@@ -12,9 +12,9 @@
 
 ## 3. Fix Audiobookshelf Service teardown
 
-- [ ] 3.1 Update daemon reconciliation purge and active Audiobookshelf finalization to include books, then extend the existing mixed-queue reconciliation test to verify books and episodes are removed while Emby and Feed slots remain.
-- [ ] 3.2 Update interactive-process Audiobookshelf replacement and removal cleanup to include books in Composed, local Bound, and remote Bound queue state; verify by extending the narrowest existing Service-action test rather than adding a UI test.
-- [ ] 3.3 Search non-test `is_audiobookshelf()` calls and `QueueItem::Audiobookshelf(_)` matches across `crates/` and `src/`; verify every remaining episode-only use is at an identity, source, progress, or transport boundary and document that classification inline only where it is otherwise ambiguous.
+- [x] 3.1 Update daemon reconciliation purge and active Audiobookshelf finalization to include books, then extend the existing mixed-queue reconciliation test to verify books and episodes are removed while Emby and Feed slots remain.
+- [x] 3.2 Update interactive-process Audiobookshelf replacement and removal cleanup to include books in Composed, local Bound, and remote Bound queue state; verify by extending the narrowest existing Service-action test rather than adding a UI test.
+- [x] 3.3 Search non-test `is_audiobookshelf()` calls and `QueueItem::Audiobookshelf(_)` matches across `crates/` and `src/`; verify every remaining episode-only use is at an identity, source, progress, or transport boundary and document that classification inline only where it is otherwise ambiguous.
 
 ## 4. Verify the change
 
