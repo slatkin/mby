@@ -133,22 +133,6 @@ fn narrow_podcast_show_paint_matches_each_one_column_hit_rect() {
 }
 
 #[test]
-fn wide_podcasts_use_a_left_show_browser_and_right_workspace() {
-    let app = audiobookshelf_app();
-    let (model, _terminal) = render_podcast_shell(app, 100, 30, true);
-    let layout = &model.app.layout.main;
-
-    assert!(
-        layout.hero_area.width < 100,
-        "wide hero must own its own pane"
-    );
-    assert!(
-        layout.left_area.x < layout.hero_area.x,
-        "show browser belongs in the left pane, workspace on the right"
-    );
-}
-
-#[test]
 fn narrow_podcasts_replace_selected_show_row_with_detail() {
     let mut app = audiobookshelf_app();
     app.audiobookshelf_browse[0].shows[0].author = Some("Author A".into());

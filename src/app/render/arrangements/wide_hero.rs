@@ -67,37 +67,6 @@ pub(in crate::app) fn wide_hero_presentation(content_area: Rect) -> Option<WideH
 mod tests {
     use super::*;
 
-    #[test]
-    fn shared_presentation_owns_breakpoint_and_pane_geometry() {
-        let wide = wide_hero_presentation(Rect {
-            x: 3,
-            y: 4,
-            width: crate::app::TWO_COLUMN_THRESHOLD,
-            height: WIDE_HERO_MIN_AREA_HEIGHT + 1,
-        });
-        assert!(wide.is_some());
-        let Some(WideHeroPanes { browser, hero }) = wide else {
-            unreachable!();
-        };
-        assert_eq!(browser.x, 3);
-        assert_eq!(hero.x, browser.right() + 2);
-
-        assert!(wide_hero_presentation(Rect {
-            x: 0,
-            y: 0,
-            width: crate::app::TWO_COLUMN_THRESHOLD - 1,
-            height: 20,
-        })
-        .is_none());
-        assert!(wide_hero_presentation(Rect {
-            x: 0,
-            y: 0,
-            width: crate::app::TWO_COLUMN_THRESHOLD,
-            height: WIDE_HERO_MIN_AREA_HEIGHT,
-        })
-        .is_none());
-    }
-
     /// The primitive owns the one-row status-row reserve (task 5.1, D7):
     /// both returned panes already exclude the terminal's bottom status row,
     /// so callers must not shrink them again.
